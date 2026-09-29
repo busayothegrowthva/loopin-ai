@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Log in | Loopin AI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--ink:#12233A;--paper:#F5F7FB;--blue:#2C4BFF;--blue-dark:#1F37C9;--mint:#DDF6E6;--mint-deep:#1E8E52;--sun:#FFC94A;--slate:#5B6B80;--line:#DCE2EC;
+--display:'Bricolage Grotesque','Segoe UI',system-ui,sans-serif;--body:'Instrument Sans','Segoe UI',system-ui,sans-serif}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--body);color:var(--ink);background:var(--paper);line-height:1.6;font-size:17px;-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;flex-direction:column}
+h1,h2,h3{font-family:var(--display);line-height:1.1;letter-spacing:-0.02em}
+a{color:inherit}
+.wrap{max-width:1120px;margin:0 auto;padding:0 24px;width:100%}
+:focus-visible{outline:3px solid var(--blue);outline-offset:3px;border-radius:6px}
+.btn{display:inline-block;font-family:var(--body);font-weight:600;font-size:16px;text-decoration:none;padding:14px 26px;border-radius:999px;border:2px solid transparent;cursor:pointer;transition:background .2s}
+.btn-primary{background:var(--blue);color:#fff}.btn-primary:hover{background:var(--blue-dark)}
+nav{background:rgba(245,247,251,.92);border-bottom:1px solid var(--line)}
+.nav-in{display:flex;align-items:center;justify-content:space-between;height:68px}
+.logo{font-family:var(--display);font-weight:800;font-size:23px;text-decoration:none;display:flex;align-items:center;gap:8px}
+.logo-mark{width:26px;height:26px;border:5px solid var(--blue);border-radius:50%;border-right-color:var(--sun);transform:rotate(-30deg)}
+.nav-links{display:flex;gap:22px;align-items:center}
+.nav-links a{text-decoration:none;font-weight:500;font-size:15px;color:var(--slate)}
+.nav-links a:hover{color:var(--ink)}
+.nav-links .btn{color:#fff;padding:10px 20px}
+main{flex:1}
+footer{padding:36px 0;background:#0C1A2C;color:#8FA1B9;font-size:15px}
+.foot{display:flex;justify-content:space-between;gap:24px;flex-wrap:wrap}
+.foot .logo{color:#fff}.foot-links{display:flex;gap:24px;flex-wrap:wrap}.foot-links a{text-decoration:none}.foot-links a:hover{color:#fff}
+/* forms */
+.card{background:#fff;border:1.5px solid var(--line);border-radius:22px;padding:34px;max-width:460px;margin:48px auto}
+.card h1{font-size:34px;font-weight:800;margin-bottom:8px}
+.card .lead{color:var(--slate);margin-bottom:24px}
+.field{margin-bottom:18px}
+.field label{display:block;font-weight:600;font-size:15px;margin-bottom:6px}
+.field input,.field select{width:100%;font-family:var(--body);font-size:16px;padding:12px 14px;border:1.5px solid var(--line);border-radius:10px;background:var(--paper);color:var(--ink)}
+.field input:focus,.field select:focus{outline:3px solid var(--blue);outline-offset:1px;background:#fff}
+.field .err{display:none;color:#B3261E;font-size:14px;margin-top:6px}
+.field.bad input,.field.bad select{border-color:#B3261E}.field.bad .err{display:block}
+.hint{font-size:13px;color:var(--slate);margin-top:6px}
+.card .btn{width:100%;text-align:center}
+.switch-line{margin-top:20px;text-align:center;font-size:15px;color:var(--slate)}
+.switch-line a{color:var(--blue);font-weight:600}
+.notice{display:none;margin-top:18px;background:#FFF4D6;border-radius:12px;padding:14px 16px;font-size:15px}
+/* legal text */
+.legal{max-width:760px;padding:56px 0 72px}
+.legal h1{font-size:clamp(34px,5vw,48px);font-weight:800;margin-bottom:8px}
+.legal .date{color:var(--slate);font-size:15px;margin-bottom:32px}
+.legal h2{font-size:24px;font-weight:700;margin:32px 0 10px}
+.legal p,.legal li{color:#33455C;margin-bottom:10px}
+.legal ul{padding-left:22px;margin-bottom:10px}
+.legal a{color:var(--blue)}
+.draft{background:#FFF4D6;border-radius:12px;padding:14px 16px;font-size:15px;margin-bottom:28px}
+</style>
+</head>
+<body>
+<nav><div class="wrap nav-in">
+<a class="logo" href="index.html"><span class="logo-mark"></span>Loopin AI</a>
+<div class="nav-links"><a href="index.html">Home</a><a href="index.html#pricing">Pricing</a><a href="login.html">Log in</a><a class="btn btn-primary" href="signup.html">Start free trial</a></div>
+</div></nav>
+<main>
+<div class="wrap"><div class="card">
+<h1>Welcome back</h1>
+<p class="lead">Log in to your Loopin assistant.</p>
+<form id="authForm" novalidate>
+<div class="field"><label for="email">Email</label><input id="email" type="email" autocomplete="email"><div class="err">Enter a valid email address.</div></div>
+<div class="field"><label for="password">Password</label><input id="password" type="password" autocomplete="current-password"><div class="err">Enter your password.</div></div>
+<button class="btn btn-primary" type="submit">Log in</button>
+</form>
+<div class="notice" id="notice" role="status">Log in opens very soon. We are connecting the account system right now.</div>
+<p class="switch-line">New to Loopin? <a href="signup.html">Start your free trial</a></p>
+</div></div></main>
+<footer><div class="wrap foot">
+<a class="logo" href="index.html"><span class="logo-mark"></span>Loopin AI</a>
+<div class="foot-links"><a href="index.html#features">Features</a><a href="index.html#pricing">Pricing</a><a href="index.html#faq">FAQ</a><a href="index.html#contact">Contact</a><a href="privacy.html">Privacy</a><a href="terms.html">Terms</a></div>
+<div>&copy; 2026 Loopin AI</div>
+</div></footer>
+<script>
+(function(){
+  var f=document.getElementById('authForm');
+  function check(id,test){var el=document.getElementById(id);var bad=!test(el.value.trim());el.parentNode.classList.toggle('bad',bad);return !bad;}
+  f.addEventListener('submit',function(e){
+    e.preventDefault();
+    var ok=true;
+    ok=check('email',function(v){return /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v)})&ok;
+    ok=check('password',function(v){return v.length>0})&&ok;
+    if(ok){document.getElementById('notice').style.display='block';}
+  });
+  
+})();
+</script>
+</body></html>
