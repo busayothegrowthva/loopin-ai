@@ -413,12 +413,13 @@ footer{padding:44px 0;background:#0C1A2C;color:#8FA1B9;font-size:15px}
     </div>
     <div class="cform">
       <form id="contactForm" novalidate>
-        <div class="field"><label for="cname">Your name</label><input id="cname" name="name" type="text" autocomplete="name"><div class="err">Please enter your name.</div></div>
-        <div class="field"><label for="cemail">Your email</label><input id="cemail" name="email" type="email" autocomplete="email"><div class="err">Please enter a valid email address.</div></div>
-        <div class="field"><label for="cmsg">How can we help?</label><textarea id="cmsg" name="message"></textarea><div class="err">Please write a short message.</div></div>
+        <div class="field"><label for="cname">Your name</label><input id="cname" name="name" type="text" maxlength="100" autocomplete="name"><div class="err">Please enter your name.</div></div>
+        <div class="field"><label for="cemail">Your email</label><input id="cemail" name="email" type="email" maxlength="200" autocomplete="email"><div class="err">Please enter a valid email address.</div></div>
+        <div class="field"><label for="cmsg">How can we help?</label><textarea id="cmsg" name="message" maxlength="2000"></textarea><div class="err">Please write a short message.</div></div>
         <button class="btn btn-primary" type="submit">Send message</button>
       </form>
       <div class="sent" id="sent" role="status">Message sent. We will reply to your email soon.</div>
+      <div class="sent" id="sendfail" role="alert" style="background:#FBE4E2">Your message could not be sent. Please try again in a moment.</div>
     </div>
   </div>
 </section>
@@ -446,6 +447,8 @@ footer{padding:44px 0;background:#0C1A2C;color:#8FA1B9;font-size:15px}
   </div>
 </footer>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
 <script>
 // Hero chat: messages appear one after another, once, on page load
 (function(){
@@ -466,18 +469,30 @@ footer{padding:44px 0;background:#0C1A2C;color:#8FA1B9;font-size:15px}
   }
   boxes.forEach(function(b){b.addEventListener('change',update)});
 })();
-// Contact form: checks the fields. TODO: connect to the database when the app backend is built.
+// Contact form: saves the message to the database
 (function(){
   var f=document.getElementById('contactForm');
   if(!f)return;
+  var btn=f.querySelector('button[type=submit]');
   f.addEventListener('submit',function(e){
     e.preventDefault();
+    document.getElementById('sendfail').style.display='none';
     var ok=true;
     function check(id,test){var el=document.getElementById(id);var bad=!test(el.value.trim());el.parentNode.classList.toggle('bad',bad);if(bad)ok=false;}
     check('cname',function(v){return v.length>1});
     check('cemail',function(v){return /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v)});
     check('cmsg',function(v){return v.length>4});
-    if(ok){f.style.display='none';document.getElementById('sent').style.display='block';}
+    if(!ok)return;
+    btn.disabled=true;btn.textContent='Sending...';
+    sb.from('contact_messages').insert({
+      name:document.getElementById('cname').value.trim(),
+      email:document.getElementById('cemail').value.trim(),
+      message:document.getElementById('cmsg').value.trim()
+    }).then(function(r){
+      btn.disabled=false;btn.textContent='Send message';
+      if(r.error){document.getElementById('sendfail').style.display='block';}
+      else{f.style.display='none';document.getElementById('sent').style.display='block';}
+    }).catch(function(){btn.disabled=false;btn.textContent='Send message';document.getElementById('sendfail').style.display='block';});
   });
 })();
 </script>

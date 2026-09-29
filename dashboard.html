@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Log in | Loopin AI</title>
+<title>Dashboard | Loopin AI</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
@@ -59,20 +59,36 @@ footer{padding:36px 0;background:#0C1A2C;color:#8FA1B9;font-size:15px}
 <body>
 <nav><div class="wrap nav-in">
 <a class="logo" href="index.html"><span class="logo-mark"></span>Loopin AI</a>
-<div class="nav-links"><a href="index.html">Home</a><a href="index.html#pricing">Pricing</a><a href="login.html">Log in</a><a class="btn btn-primary" href="signup.html">Start free trial</a></div>
+<div class="nav-links"><a class="btn btn-primary" href="#" id="logout">Log out</a></div>
 </div></nav>
 <main>
-<div class="wrap"><div class="card">
-<h1>Welcome back</h1>
-<p class="lead">Log in to your Loopin assistant.</p>
-<form id="authForm" novalidate>
-<div class="field"><label for="email">Email</label><input id="email" type="email" autocomplete="email"><div class="err">Enter a valid email address.</div></div>
-<div class="field"><label for="password">Password</label><input id="password" type="password" autocomplete="current-password"><div class="err">Enter your password.</div></div>
-<button class="btn btn-primary" type="submit">Log in</button>
-</form>
-<div class="notice" id="notice" role="status"></div>
-<p class="switch-line">New to Loopin? <a href="signup.html">Start your free trial</a></p>
-</div></div></main>
+<style>
+.dash{padding:48px 0 72px}
+.dash h1{font-size:clamp(32px,5vw,46px);font-weight:800}
+.dgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:20px;margin-top:32px}
+.dcard{background:#fff;border:1.5px solid var(--line);border-radius:18px;padding:26px}
+.dcard h3{font-size:21px;margin-bottom:6px}
+.dcard p{color:var(--slate);font-size:16px}
+.tag{display:inline-block;margin-top:14px;font-size:13px;font-weight:600;padding:4px 12px;border-radius:999px;background:var(--paper);color:var(--slate)}
+.trial{display:inline-block;margin-top:14px;background:var(--mint);border-radius:12px;padding:10px 16px;font-weight:600}
+#state{padding:80px 0;color:var(--slate);font-size:19px}
+@media(max-width:700px){.dgrid{grid-template-columns:1fr}}
+</style>
+<div class="wrap dash">
+  <div id="state" role="status">Loading your account...</div>
+  <div id="dash" style="display:none">
+    <h1 id="hello"></h1>
+    <p class="sub" style="color:var(--slate);margin-top:10px" id="planline"></p>
+    <div class="trial" id="trial"></div>
+    <div class="dgrid">
+      <div class="dcard"><h3>Connect your Google account</h3><p>So Loopin can use Gmail, Calendar, Tasks, Docs and Sheets for you.</p><span class="tag">Coming next</span></div>
+      <div class="dcard"><h3>Connect your WhatsApp</h3><p>So you can message your assistant like a real contact.</p><span class="tag">Coming next</span></div>
+      <div class="dcard"><h3>Choose which chats Loopin sees</h3><p>Every client chat is off until you switch it on.</p><span class="tag">Coming next</span></div>
+      <div class="dcard"><h3>Your assistant's personality</h3><p>Professional, formal, friendly or casual. You pick.</p><span class="tag">Coming next</span></div>
+    </div>
+  </div>
+</div>
+</main>
 <footer><div class="wrap foot">
 <a class="logo" href="index.html"><span class="logo-mark"></span>Loopin AI</a>
 <div class="foot-links"><a href="index.html#features">Features</a><a href="index.html#pricing">Pricing</a><a href="index.html#faq">FAQ</a><a href="index.html#contact">Contact</a><a href="privacy.html">Privacy</a><a href="terms.html">Terms</a></div>
@@ -82,29 +98,23 @@ footer{padding:36px 0;background:#0C1A2C;color:#8FA1B9;font-size:15px}
 <script src="config.js"></script>
 <script>
 (function(){
-  var f=document.getElementById('authForm'),btn=f.querySelector('button');
-  function show(msg){var n=document.getElementById('notice');n.textContent=msg;n.style.display='block';}
-  function hide(){document.getElementById('notice').style.display='none';}
-  function check(id,test){var el=document.getElementById(id);var bad=!test(el.value.trim());el.parentNode.classList.toggle('bad',bad);return !bad;}
-  var emailOk=function(v){return /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v)};
-  sb.auth.getSession().then(function(r){if(r.data&&r.data.session){location.href='dashboard.html';}});
-  f.addEventListener('submit',function(e){
-    e.preventDefault();hide();
-    var ok=check('email',emailOk);
-    ok=check('password',function(v){return v.length>0})&&ok;
-    if(!ok)return;
-    btn.disabled=true;btn.textContent='Logging in...';
-    sb.auth.signInWithPassword({email:document.getElementById('email').value.trim(),password:document.getElementById('password').value})
-    .then(function(r){
-      if(r.error){
-        btn.disabled=false;btn.textContent='Log in';
-        var m=r.error.message||'';
-        if(/invalid login/i.test(m))show('The email or password is wrong. Check both and try again.');
-        else if(/not confirmed/i.test(m))show('Please confirm your email first. Check your inbox for our message.');
-        else show('Something went wrong. Please try again in a moment.');
-      }else{location.href='dashboard.html';}
-    }).catch(function(){btn.disabled=false;btn.textContent='Log in';show('Could not connect. Check your internet and try again.');});
+  var state=document.getElementById('state');
+  document.getElementById('logout').addEventListener('click',function(e){
+    e.preventDefault();sb.auth.signOut().then(function(){location.href='index.html';});
   });
+  sb.auth.getSession().then(function(r){
+    var session=r.data&&r.data.session;
+    if(!session){location.href='login.html';return;}
+    return sb.from('profiles').select('full_name,plan,trial_ends_at').eq('id',session.user.id).single().then(function(p){
+      if(p.error||!p.data){state.textContent='We could not load your account. Refresh the page, or log out and log in again.';return;}
+      var d=p.data,first=(d.full_name||'there').split(' ')[0];
+      document.getElementById('hello').textContent='Welcome, '+first+'.';
+      document.getElementById('planline').textContent='You are on the '+(d.plan==='pro'?'Pro':'Starter')+' plan.';
+      var days=Math.max(0,Math.ceil((new Date(d.trial_ends_at)-new Date())/86400000));
+      document.getElementById('trial').textContent=days>0?('Free trial: '+days+' day'+(days===1?'':'s')+' left'):'Your free trial has ended';
+      state.style.display='none';document.getElementById('dash').style.display='block';
+    });
+  }).catch(function(){state.textContent='Could not connect. Check your internet and refresh the page.';});
 })();
 </script>
 </body></html>

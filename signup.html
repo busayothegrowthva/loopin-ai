@@ -72,7 +72,7 @@ footer{padding:36px 0;background:#0C1A2C;color:#8FA1B9;font-size:15px}
 <div class="field"><label for="plan">Plan</label><select id="plan"><option value="starter">Starter, $19 a month</option><option value="pro">Pro, $39 a month</option></select></div>
 <button class="btn btn-primary" type="submit">Create account</button>
 </form>
-<div class="notice" id="notice" role="status">Sign up opens very soon. We are connecting the account system right now.</div>
+<div class="notice" id="notice" role="status"></div>
 <p class="switch-line">Already have an account? <a href="login.html">Log in</a></p>
 </div></div></main>
 <footer><div class="wrap foot">
@@ -80,20 +80,44 @@ footer{padding:36px 0;background:#0C1A2C;color:#8FA1B9;font-size:15px}
 <div class="foot-links"><a href="index.html#features">Features</a><a href="index.html#pricing">Pricing</a><a href="index.html#faq">FAQ</a><a href="index.html#contact">Contact</a><a href="privacy.html">Privacy</a><a href="terms.html">Terms</a></div>
 <div>&copy; 2026 Loopin AI</div>
 </div></footer>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
 <script>
 (function(){
-  var f=document.getElementById('authForm');
+  var f=document.getElementById('authForm'),btn=f.querySelector('button');
+  function show(msg){var n=document.getElementById('notice');n.textContent=msg;n.style.display='block';}
+  function hide(){document.getElementById('notice').style.display='none';}
   function check(id,test){var el=document.getElementById(id);var bad=!test(el.value.trim());el.parentNode.classList.toggle('bad',bad);return !bad;}
-  f.addEventListener('submit',function(e){
-    e.preventDefault();
-    var ok=true;
-    ok=check('name',function(v){return v.length>1})&&ok;
-    ok=check('email',function(v){return /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v)})&&ok;
-    ok=check('password',function(v){return v.length>=8})&&ok;
-    if(ok){document.getElementById('notice').style.display='block';}
-  });
+  var emailOk=function(v){return /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v)};
   var p=new URLSearchParams(location.search).get('plan');
   if(p==='starter'||p==='pro'){document.getElementById('plan').value=p;}
+  sb.auth.getSession().then(function(r){if(r.data&&r.data.session){location.href='dashboard.html';}});
+  f.addEventListener('submit',function(e){
+    e.preventDefault();hide();
+    var ok=check('name',function(v){return v.length>1});
+    ok=check('email',emailOk)&&ok;
+    ok=check('password',function(v){return v.length>=8})&&ok;
+    if(!ok)return;
+    btn.disabled=true;btn.textContent='Creating your account...';
+    sb.auth.signUp({
+      email:document.getElementById('email').value.trim(),
+      password:document.getElementById('password').value,
+      options:{data:{full_name:document.getElementById('name').value.trim(),plan:document.getElementById('plan').value}}
+    }).then(function(r){
+      btn.disabled=false;btn.textContent='Create account';
+      if(r.error){
+        var m=r.error.message||'';
+        if(/already registered/i.test(m))show('That email already has an account. Please log in instead.');
+        else if(/password/i.test(m))show('Please choose a stronger password with at least 8 characters.');
+        else if(/rate limit|too many/i.test(m))show('Too many attempts. Please wait a few minutes and try again.');
+        else show('Something went wrong. Please try again in a moment.');
+        return;
+      }
+      if(r.data.user&&r.data.user.identities&&r.data.user.identities.length===0){show('That email already has an account. Please log in instead.');return;}
+      if(r.data.session){location.href='dashboard.html';}
+      else{show('Almost done. Check your email and click the link to confirm your account, then log in.');}
+    }).catch(function(){btn.disabled=false;btn.textContent='Create account';show('Could not connect. Check your internet and try again.');});
+  });
 })();
 </script>
 </body></html>
