@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Loopin AI | The executive assistant that lives in your WhatsApp</title>
+<meta name="description" content="Loopin AI is an AI executive assistant inside WhatsApp. It schedules meetings, drafts emails, sends invoices and remembers what you promised. It never acts without your OK.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#12233A; --paper:#F5F7FB; --white:#fff; --blue:#2C4BFF; --blue-dark:#1F37C9;
+  --mint:#DDF6E6; --mint-deep:#1E8E52; --sun:#FFC94A; --slate:#5B6B80; --line:#DCE2EC;
+  --display:'Bricolage Grotesque','Segoe UI',system-ui,sans-serif;
+  --body:'Instrument Sans','Segoe UI',system-ui,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:var(--body);color:var(--ink);background:var(--paper);line-height:1.6;font-size:17px;-webkit-font-smoothing:antialiased}
+h1,h2,h3{font-family:var(--display);line-height:1.08;letter-spacing:-0.02em}
+a{color:inherit}
+.wrap{max-width:1120px;margin:0 auto;padding:0 24px}
+:focus-visible{outline:3px solid var(--blue);outline-offset:3px;border-radius:6px}
+
+/* Buttons */
+.btn{display:inline-block;font-family:var(--body);font-weight:600;font-size:16px;text-decoration:none;padding:14px 26px;border-radius:999px;border:2px solid transparent;cursor:pointer;transition:background .2s,transform .2s}
+.btn-primary{background:var(--blue);color:#fff}
+.btn-primary:hover{background:var(--blue-dark)}
+.btn-ghost{border-color:var(--ink);color:var(--ink);background:transparent}
+.btn-ghost:hover{background:var(--ink);color:#fff}
+
+/* Nav */
+nav{position:sticky;top:0;z-index:20;background:rgba(245,247,251,.92);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+.nav-in{display:flex;align-items:center;justify-content:space-between;height:68px}
+.logo{font-family:var(--display);font-weight:800;font-size:23px;text-decoration:none;display:flex;align-items:center;gap:8px}
+.logo-mark{width:26px;height:26px;border:5px solid var(--blue);border-radius:50%;border-right-color:var(--sun);transform:rotate(-30deg)}
+.nav-links{display:flex;gap:28px;align-items:center}
+.nav-links a{text-decoration:none;font-weight:500;font-size:15px;color:var(--slate)}
+.nav-links a:hover{color:var(--ink)}
+.nav-links .btn{color:#fff;padding:10px 20px;font-size:15px}
+@media(max-width:820px){.nav-links a:not(.btn){display:none}}
+
+/* Hero */
+.hero{padding:72px 0 88px}
+.hero-grid{display:grid;grid-template-columns:1.1fr .9fr;gap:56px;align-items:center}
+.hero h1{font-size:clamp(40px,6vw,68px);font-weight:800}
+.hero p.lead{font-size:20px;color:var(--slate);margin:24px 0 32px;max-width:520px}
+.hero-cta{display:flex;gap:14px;flex-wrap:wrap}
+.hero-note{margin-top:18px;font-size:14px;color:var(--slate)}
+@media(max-width:900px){.hero-grid{grid-template-columns:1fr}.hero{padding:44px 0 56px}}
+
+/* Phone */
+.phone{background:var(--ink);border-radius:38px;padding:12px;max-width:380px;margin:0 auto;width:100%;box-shadow:0 30px 60px -20px rgba(18,35,58,.45)}
+.screen{background:#EAE6DF;border-radius:28px;overflow:hidden;min-height:520px;display:flex;flex-direction:column}
+.chat-head{background:var(--ink);color:#fff;padding:14px 18px;display:flex;align-items:center;gap:12px}
+.avatar{width:38px;height:38px;border-radius:50%;background:var(--blue);display:grid;place-items:center;font-family:var(--display);font-weight:800}
+.chat-head b{display:block;font-size:16px;line-height:1.2}
+.chat-head span{font-size:12px;color:#9FB0C6}
+.chat-body{padding:18px 14px;display:flex;flex-direction:column;gap:10px;flex:1}
+.msg{max-width:86%;padding:10px 14px;border-radius:16px;font-size:15px;line-height:1.45;opacity:0;transform:translateY(8px);transition:opacity .4s,transform .4s}
+.msg.show{opacity:1;transform:none}
+.msg.you{align-self:flex-end;background:var(--mint);border-bottom-right-radius:4px}
+.msg.bot{align-self:flex-start;background:#fff;border-bottom-left-radius:4px}
+.plan{margin:8px 0;padding:10px 12px;background:var(--paper);border-left:4px solid var(--blue);border-radius:6px;font-size:14px}
+.plan div+div{margin-top:6px}
+.plan b{display:block;font-size:12px;color:var(--slate);font-weight:600}
+.choices{display:flex;gap:8px;margin-top:10px}
+.choices span{flex:1;text-align:center;padding:7px 0;border-radius:8px;font-size:14px;font-weight:600;border:1.5px solid var(--line)}
+.choices .yes{background:var(--blue);color:#fff;border-color:var(--blue)}
+.tick{color:var(--mint-deep);font-weight:700}
+
+/* Sections */
+section{padding:88px 0}
+section h2{font-size:clamp(30px,4.2vw,46px);font-weight:800;max-width:720px}
+.sub{color:var(--slate);font-size:19px;max-width:620px;margin-top:16px}
+.dark{background:var(--ink);color:#fff}
+.dark .sub{color:#A9B8CC}
+
+/* Problem */
+.contrast{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:48px}
+.contrast>div{padding:32px;border-radius:20px}
+.before{background:#fff;border:1px solid var(--line)}
+.after{background:var(--blue);color:#fff}
+.contrast h3{font-size:24px;margin-bottom:16px}
+.contrast ul{list-style:none}
+.contrast li{padding:10px 0;border-top:1px solid rgba(128,140,160,.28)}
+.after li{border-color:rgba(255,255,255,.28)}
+@media(max-width:800px){.contrast{grid-template-columns:1fr}}
+
+/* Assistant commands */
+.cmds{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;margin-top:44px}
+.cmd{background:#1B3350;border-radius:16px;padding:22px 24px}
+.cmd q{display:block;font-family:var(--display);font-size:20px;font-weight:500;quotes:none;margin-bottom:8px}
+.cmd p{color:#A9B8CC;font-size:15px}
+@media(max-width:700px){.cmds{grid-template-columns:1fr}}
+
+/* Features */
+.feat-main{margin-top:48px;background:var(--sun);border-radius:24px;padding:40px;display:grid;grid-template-columns:1fr 1fr;gap:32px}
+.feat-main h3{font-size:32px;margin-bottom:12px}
+.feat-main .eg{background:#fff;border-radius:16px;padding:20px;font-size:15px}
+.feat-main .eg p+p{margin-top:10px;padding-top:10px;border-top:1px dashed var(--line)}
+.feat-list{margin-top:20px;display:grid;grid-template-columns:repeat(2,1fr);gap:20px}
+.feat{padding:28px;border:1.5px solid var(--line);border-radius:14px;background:#fff}
+.feat:nth-child(2){border-radius:14px 34px 14px 14px}
+.feat:nth-child(3){border-radius:14px 14px 14px 34px}
+.feat h3{font-size:22px;margin-bottom:8px}
+.feat p{color:var(--slate);font-size:16px}
+@media(max-width:800px){.feat-main{grid-template-columns:1fr;padding:28px}.feat-list{grid-template-columns:1fr}}
+
+/* Control */
+.control-grid{display:grid;grid-template-columns:1fr 1fr;gap:56px;align-items:center}
+.panel{background:#fff;color:var(--ink);border-radius:22px;padding:26px;max-width:440px;width:100%;margin:0 auto}
+.panel-head{display:flex;align-items:center;gap:12px;padding-bottom:16px;border-bottom:1px solid var(--line);margin-bottom:6px}
+.panel-head .avatar{background:var(--slate)}
+.panel-head small{display:block;color:var(--slate);font-size:13px}
+.row{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:14px 0;border-bottom:1px solid var(--line)}
+.row:last-of-type{border-bottom:0}
+.row small{display:block;color:var(--slate);font-size:13px;line-height:1.3}
+.switch{position:relative;width:50px;height:28px;flex:none}
+.switch input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;z-index:2}
+.switch i{position:absolute;inset:0;background:#C5CDDA;border-radius:999px;transition:background .2s}
+.switch i::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;background:#fff;border-radius:50%;transition:transform .2s}
+.switch input:checked+i{background:var(--mint-deep)}
+.switch input:checked+i::after{transform:translateX(22px)}
+.switch input:focus-visible+i{outline:3px solid var(--blue);outline-offset:3px}
+.status{margin-top:14px;font-size:14px;padding:10px 14px;border-radius:10px;background:var(--paper);color:var(--slate)}
+.checks{list-style:none;margin-top:28px}
+.checks li{padding:8px 0 8px 32px;position:relative;color:#C9D4E3}
+.checks li::before{content:"";position:absolute;left:0;top:14px;width:16px;height:9px;border-left:3px solid var(--sun);border-bottom:3px solid var(--sun);transform:rotate(-45deg)}
+@media(max-width:860px){.control-grid{grid-template-columns:1fr;gap:40px}}
+
+/* Steps */
+.steps{margin-top:48px;display:grid;grid-template-columns:repeat(4,1fr);gap:0;counter-reset:s}
+.step{padding:0 24px 0 0;position:relative}
+.step::before{counter-increment:s;content:counter(s);display:grid;place-items:center;width:44px;height:44px;border-radius:50%;background:var(--ink);color:#fff;font-family:var(--display);font-weight:800;margin-bottom:16px}
+.step::after{content:"";position:absolute;top:22px;left:52px;right:8px;height:2px;background:var(--line)}
+.step:last-child::after{display:none}
+.step h3{font-size:20px;margin-bottom:6px}
+.step p{color:var(--slate);font-size:15px}
+@media(max-width:860px){.steps{grid-template-columns:1fr;gap:28px}.step::after{display:none}}
+
+/* Pricing */
+.plans{display:grid;grid-template-columns:repeat(2,1fr);gap:24px;margin-top:48px;max-width:860px}
+.plan-card{background:#fff;border:1.5px solid var(--line);border-radius:22px;padding:34px;display:flex;flex-direction:column}
+.plan-card.pro{border:2.5px solid var(--blue);position:relative}
+.badge{position:absolute;top:-14px;left:28px;background:var(--blue);color:#fff;font-size:13px;font-weight:600;padding:4px 14px;border-radius:999px}
+.plan-card h3{font-size:24px}
+.price{font-family:var(--display);font-size:52px;font-weight:800;margin:10px 0 2px}
+.price small{font-size:17px;font-weight:500;color:var(--slate);font-family:var(--body)}
+.for{color:var(--slate);font-size:15px;margin-bottom:20px}
+.plan-card ul{list-style:none;margin-bottom:28px;flex:1}
+.plan-card li{padding:8px 0 8px 28px;position:relative;font-size:16px}
+.plan-card li::before{content:"";position:absolute;left:2px;top:15px;width:13px;height:7px;border-left:3px solid var(--mint-deep);border-bottom:3px solid var(--mint-deep);transform:rotate(-45deg)}
+.fine{margin-top:22px;color:var(--slate);font-size:14px}
+@media(max-width:760px){.plans{grid-template-columns:1fr}}
+
+/* FAQ */
+.faq{margin-top:40px;max-width:760px}
+details{border-bottom:1px solid var(--line);padding:20px 0}
+summary{font-family:var(--display);font-weight:700;font-size:20px;cursor:pointer;list-style:none;display:flex;justify-content:space-between;gap:16px}
+summary::-webkit-details-marker{display:none}
+summary::after{content:"+";font-size:26px;line-height:1;color:var(--blue)}
+details[open] summary::after{content:"\2013"}
+details p{margin-top:12px;color:var(--slate)}
+
+/* Final CTA + footer */
+.final{text-align:left}
+.final h2{color:#fff}
+.final .btn{margin-top:32px}
+footer{padding:44px 0;background:#0C1A2C;color:#8FA1B9;font-size:15px}
+.foot{display:flex;justify-content:space-between;gap:24px;flex-wrap:wrap}
+.foot .logo{color:#fff}
+.foot-links{display:flex;gap:24px;flex-wrap:wrap}
+.foot-links a{text-decoration:none}
+.foot-links a:hover{color:#fff}
+
+
+/* Contact */
+.contact-grid{display:grid;grid-template-columns:1fr 1fr;gap:56px;align-items:start}
+.cform{background:#fff;border:1.5px solid var(--line);border-radius:22px;padding:30px}
+.field{margin-bottom:18px}
+.field label{display:block;font-weight:600;font-size:15px;margin-bottom:6px}
+.field input,.field textarea{width:100%;font-family:var(--body);font-size:16px;padding:12px 14px;border:1.5px solid var(--line);border-radius:10px;background:var(--paper);color:var(--ink)}
+.field textarea{min-height:130px;resize:vertical}
+.field input:focus,.field textarea:focus{outline:3px solid var(--blue);outline-offset:1px;background:#fff}
+.field .err{display:none;color:#B3261E;font-size:14px;margin-top:6px}
+.field.bad input,.field.bad textarea{border-color:#B3261E}
+.field.bad .err{display:block}
+.sent{display:none;background:var(--mint);border-radius:12px;padding:16px;font-weight:500}
+@media(max-width:860px){.contact-grid{grid-template-columns:1fr;gap:32px}}
+
+@media(prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}.msg{opacity:1;transform:none}}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap nav-in">
+    <a class="logo" href="#top"><span class="logo-mark"></span>Loopin AI</a>
+    <div class="nav-links">
+      <a href="#features">Features</a>
+      <a href="#how">How it works</a>
+      <a href="#pricing">Pricing</a>
+      <a href="#faq">FAQ</a>
+      <a href="#contact">Contact</a>
+      <a href="/login">Log in</a>
+      <a class="btn btn-primary" href="/signup">Start free trial</a>
+    </div>
+  </div>
+</nav>
+
+<header class="hero" id="top">
+  <div class="wrap hero-grid">
+    <div>
+      <h1>The executive assistant that lives in your WhatsApp.</h1>
+      <p class="lead">Tell Loopin what you need. It books the meeting, drafts the email, sends the invoice and remembers what you promised. It works 24/7 and never acts without your OK.</p>
+      <div class="hero-cta">
+        <a class="btn btn-primary" href="/signup">Start your free trial</a>
+        <a class="btn btn-ghost" href="#how">See how it works</a>
+      </div>
+      <p class="hero-note">14 days free. No hiring, no training, no sick days.</p>
+    </div>
+
+    <div class="phone" aria-label="Example WhatsApp conversation with Loopin AI">
+      <div class="screen">
+        <div class="chat-head">
+          <div class="avatar">L</div>
+          <div><b>Loopin AI</b><span>Your assistant</span></div>
+        </div>
+        <div class="chat-body" id="chat">
+          <div class="msg you">Set up a call with Ada on Friday at 3pm and email her the agenda.</div>
+          <div class="msg bot">
+            Here is what I will do:
+            <div class="plan">
+              <div><b>Google Calendar</b>Call with Ada, Fri 3:00 PM</div>
+              <div><b>Gmail</b>"Agenda for Friday" to Ada</div>
+            </div>
+            Send it?
+            <div class="choices"><span class="yes">Yes</span><span>Edit</span><span>No</span></div>
+          </div>
+          <div class="msg you">Yes</div>
+          <div class="msg bot"><span class="tick">Done.</span> Call booked and email sent to Ada.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<section id="problem" style="background:var(--paper);padding-top:24px">
+  <div class="wrap">
+    <h2>Meta's WhatsApp bot answers your customers. Then everything it agreed to is forgotten.</h2>
+    <p class="sub">A price is agreed. A date is confirmed. A deadline is promised. All of it stays stuck inside the chat until you copy it out by hand.</p>
+    <div class="contrast">
+      <div class="before">
+        <h3>Without Loopin</h3>
+        <ul>
+          <li>You copy dates into your calendar yourself</li>
+          <li>Agreed prices never become invoices</li>
+          <li>You promise the same thing twice and forget both times</li>
+          <li>A bot quotes an old policy and nobody notices</li>
+          <li>You need a human assistant for every small task</li>
+        </ul>
+      </div>
+      <div class="after">
+        <h3>With Loopin</h3>
+        <ul>
+          <li>Agreed dates become calendar events</li>
+          <li>Agreed prices become invoices and payment links</li>
+          <li>Broken repeat promises get flagged to you</li>
+          <li>Wrong answers get caught the same day</li>
+          <li>You just message your assistant and it's done</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="dark" id="assistant">
+  <div class="wrap">
+    <h2>Just tell it what you need, like you would tell a real assistant.</h2>
+    <p class="sub">Loopin connects to your Google account: Gmail, Calendar, Tasks, Docs and Sheets. You type or send a voice note. It does the work.</p>
+    <div class="cmds">
+      <div class="cmd"><q>"Schedule a meeting with Tola on Monday morning."</q><p>Finds the time, adds it to Google Calendar and invites Tola.</p></div>
+      <div class="cmd"><q>"Draft an email to my supplier about the delayed delivery."</q><p>Writes it in your voice. You approve. It sends from your Gmail.</p></div>
+      <div class="cmd"><q>"Remind me tomorrow at 9 to call the bank."</q><p>Creates the task and reminds you at the right time.</p></div>
+      <div class="cmd"><q>"Send Ada an invoice for $400."</q><p>Creates the invoice and sends the payment link.</p></div>
+      <div class="cmd"><q>"Write up notes from today's call in a doc."</q><p>Creates a Google Doc with the notes and shares the link with you.</p></div>
+      <div class="cmd"><q>"Add Ada to my client tracker sheet."</q><p>Adds a new row in your Google Sheet with her details and the deal.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="features">
+  <div class="wrap">
+    <h2>Five things working quietly in the background.</h2>
+    <p class="sub">Each one closes a gap between what was said in a chat and what actually happens in your business.</p>
+
+    <div class="feat-main">
+      <div>
+        <h3>Commitment Sync</h3>
+        <p>When a client agrees to a date, a price or a deadline in WhatsApp, Loopin turns it into a real calendar event or task. You confirm with one tap.</p>
+      </div>
+      <div class="eg">
+        <p><b>Client:</b> "Let's confirm the shoot for the 14th. I need the edited photos within two weeks."</p>
+        <p><b>Loopin creates:</b> a calendar event on the 14th and a task called "Deliver edited photos" due two weeks later.</p>
+      </div>
+    </div>
+
+    <div class="feat-list">
+      <div class="feat"><h3>Revenue Sync</h3><p>A price is agreed, so Loopin prepares the invoice and payment link. If it is unpaid after five days, it sends one polite reminder you approved.</p></div>
+      <div class="feat"><h3>Consistency Watch</h3><p>Remembers what you promised across many chats. If you tell a client twice that you will send something and it still has not gone out, you get a private alert.</p></div>
+      <div class="feat"><h3>Accuracy Watch</h3><p>Checks what a bot or team member told a customer against your real prices and policies. Wrong answers are flagged before more customers hear them.</p></div>
+      <div class="feat"><h3>Voice Sync</h3><p>Send Loopin a voice note while you are busy. It becomes a tracked task with a due date, so nothing sits forgotten in your chat history.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="dark" id="control">
+  <div class="wrap control-grid">
+    <div>
+      <h2>Loopin only sees the chats you allow.</h2>
+      <p class="sub">Nothing is switched on until you say so. You decide, chat by chat and feature by feature.</p>
+      <ul class="checks">
+        <li>Off by default for every client chat</li>
+        <li>Turn each feature on or off separately</li>
+        <li>Switch it off and Loopin stops right away</li>
+        <li>Loopin asks before it sends, books or creates anything</li>
+      </ul>
+    </div>
+
+    <div class="panel" aria-label="Interactive example of chat permissions">
+      <div class="panel-head">
+        <div class="avatar">A</div>
+        <div><b>Chat with Ada</b><small>Client</small></div>
+      </div>
+      <label class="row"><span>Commitment Sync<small>Turn agreements into tasks</small></span><span class="switch"><input type="checkbox" data-name="Commitment Sync"><i></i></span></label>
+      <label class="row"><span>Revenue Sync<small>Invoices from agreed prices</small></span><span class="switch"><input type="checkbox" data-name="Revenue Sync"><i></i></span></label>
+      <label class="row"><span>Consistency Watch<small>Track repeated promises</small></span><span class="switch"><input type="checkbox" data-name="Consistency Watch"><i></i></span></label>
+      <label class="row"><span>Accuracy Watch<small>Check answers against your facts</small></span><span class="switch"><input type="checkbox" data-name="Accuracy Watch"><i></i></span></label>
+      <div class="status" id="status" aria-live="polite">Loopin cannot see this chat.</div>
+    </div>
+  </div>
+</section>
+
+<section id="how">
+  <div class="wrap">
+    <h2>Set up in about five minutes.</h2>
+    <div class="steps">
+      <div class="step"><h3>Create your account</h3><p>Sign up and start your 14-day free trial.</p></div>
+      <div class="step"><h3>Connect your tools</h3><p>Link your Google account and your WhatsApp number.</p></div>
+      <div class="step"><h3>Choose what Loopin sees</h3><p>Pick which chats and which features to switch on.</p></div>
+      <div class="step"><h3>Message your assistant</h3><p>Ask for anything. Approve with one tap.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="pricing" style="background:#EAEFF7">
+  <div class="wrap">
+    <h2>Costs less than one hour of a human assistant per week.</h2>
+    <p class="sub">Pick a plan. Cancel any time.</p>
+    <div class="plans">
+      <div class="plan-card">
+        <h3>Starter</h3>
+        <div class="price">$19<small> / month</small></div>
+        <p class="for">For solo founders and consultants getting started.</p>
+        <ul>
+          <li>AI assistant in WhatsApp</li>
+          <li>Gmail, Calendar, Tasks, Docs and Sheets</li>
+          <li>Reminders and Voice Sync</li>
+          <li>Commitment Sync on up to 5 chats</li>
+        </ul>
+        <a class="btn btn-ghost" href="/signup?plan=starter">Start free trial</a>
+      </div>
+      <div class="plan-card pro">
+        <span class="badge">Most popular</span>
+        <h3>Pro</h3>
+        <div class="price">$39<small> / month</small></div>
+        <p class="for">For busy owners with many client chats.</p>
+        <ul>
+          <li>Everything in Starter</li>
+          <li>All five features on unlimited chats</li>
+          <li>Revenue Sync with payment links</li>
+          <li>Consistency Watch and Accuracy Watch</li>
+        </ul>
+        <a class="btn btn-primary" href="/signup?plan=pro">Start free trial</a>
+      </div>
+    </div>
+    <p class="fine">14 days free on both plans. Cancel before the trial ends and you pay nothing.</p>
+  </div>
+</section>
+
+<section id="faq">
+  <div class="wrap">
+    <h2>Questions people ask.</h2>
+    <div class="faq">
+      <details><summary>Does Loopin replace Meta's WhatsApp AI?</summary><p>No. Meta's AI talks to your customers. Loopin sits behind the conversation and makes sure what was agreed actually happens in your calendar, tasks and invoices. They work together.</p></details>
+      <details><summary>Can Loopin read all my chats?</summary><p>No. Loopin can only see a chat after you switch it on for that chat. Until then it does nothing. You can switch it off any time.</p></details>
+      <details><summary>Will it send emails or book meetings without asking me?</summary><p>No. Before it sends an email, books a meeting or creates an invoice, it shows you what it plans to do and waits for your Yes, Edit or No.</p></details>
+      <details><summary>What if Loopin gets something wrong?</summary><p>That is why you approve first. If it is unsure, it tells you instead of guessing. You can fix anything with one tap before it goes out.</p></details>
+      <details><summary>Which tools does it connect to?</summary><p>Your Google account (Gmail, Calendar, Tasks, Docs and Sheets) and WhatsApp. Payment links and invoicing tools are part of the Pro plan.</p></details>
+      <details><summary>Does it work in my country?</summary><p>Yes. Loopin is built for anyone who runs their business through WhatsApp, anywhere in the world.</p></details>
+      <details><summary>Can I cancel?</summary><p>Yes, at any time from your account. Cancel during the free trial and you are not charged.</p></details>
+    </div>
+  </div>
+</section>
+
+<section id="contact">
+  <div class="wrap contact-grid">
+    <div>
+      <h2>Have a question? Talk to us.</h2>
+      <p class="sub">Not sure if Loopin fits your business, or want help getting set up? Send a message and a real person will reply.</p>
+    </div>
+    <div class="cform">
+      <form id="contactForm" novalidate>
+        <div class="field"><label for="cname">Your name</label><input id="cname" name="name" type="text" autocomplete="name"><div class="err">Please enter your name.</div></div>
+        <div class="field"><label for="cemail">Your email</label><input id="cemail" name="email" type="email" autocomplete="email"><div class="err">Please enter a valid email address.</div></div>
+        <div class="field"><label for="cmsg">How can we help?</label><textarea id="cmsg" name="message"></textarea><div class="err">Please write a short message.</div></div>
+        <button class="btn btn-primary" type="submit">Send message</button>
+      </form>
+      <div class="sent" id="sent" role="status">Message sent. We will reply to your email soon.</div>
+    </div>
+  </div>
+</section>
+
+<section class="dark final">
+  <div class="wrap">
+    <h2>Always in the loop. Never chasing it.</h2>
+    <p class="sub">Give your WhatsApp an assistant that follows through.</p>
+    <a class="btn btn-primary" href="/signup">Start your free trial</a>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap foot">
+    <a class="logo" href="#top"><span class="logo-mark"></span>Loopin AI</a>
+    <div class="foot-links">
+      <a href="#features">Features</a>
+      <a href="#pricing">Pricing</a>
+      <a href="#faq">FAQ</a>
+      <a href="#contact">Contact</a>
+      <a href="/privacy">Privacy</a>
+      <a href="/terms">Terms</a>
+    </div>
+    <div>&copy; 2026 Loopin AI</div>
+  </div>
+</footer>
+
+<script>
+// Hero chat: messages appear one after another, once, on page load
+(function(){
+  var msgs=document.querySelectorAll('#chat .msg');
+  var reduce=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if(reduce){msgs.forEach(function(m){m.classList.add('show')});return;}
+  var delays=[500,1900,4200,5400];
+  msgs.forEach(function(m,i){setTimeout(function(){m.classList.add('show')},delays[i]||i*1500);});
+})();
+
+// Permissions panel: shows what Loopin can see
+(function(){
+  var boxes=document.querySelectorAll('.panel input[type=checkbox]');
+  var status=document.getElementById('status');
+  function update(){
+    var on=[];boxes.forEach(function(b){if(b.checked)on.push(b.getAttribute('data-name'))});
+    status.textContent=on.length===0?'Loopin cannot see this chat.':'Loopin can see this chat for: '+on.join(', ')+'.';
+  }
+  boxes.forEach(function(b){b.addEventListener('change',update)});
+})();
+// Contact form: checks the fields. TODO: connect to the database when the app backend is built.
+(function(){
+  var f=document.getElementById('contactForm');
+  if(!f)return;
+  f.addEventListener('submit',function(e){
+    e.preventDefault();
+    var ok=true;
+    function check(id,test){var el=document.getElementById(id);var bad=!test(el.value.trim());el.parentNode.classList.toggle('bad',bad);if(bad)ok=false;}
+    check('cname',function(v){return v.length>1});
+    check('cemail',function(v){return /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v)});
+    check('cmsg',function(v){return v.length>4});
+    if(ok){f.style.display='none';document.getElementById('sent').style.display='block';}
+  });
+})();
+</script>
+</body>
+</html>
