@@ -63,28 +63,81 @@ footer{padding:36px 0;background:#0C1A2C;color:#8FA1B9;font-size:15px}
 </div></nav>
 <main>
 <style>
-.dash{padding:48px 0 72px}
-.dash h1{font-size:clamp(32px,5vw,46px);font-weight:800}
-.dgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:20px;margin-top:32px}
-.dcard{background:#fff;border:1.5px solid var(--line);border-radius:18px;padding:26px}
-.dcard h3{font-size:21px;margin-bottom:6px}
-.dcard p{color:var(--slate);font-size:16px}
-.tag{display:inline-block;margin-top:14px;font-size:13px;font-weight:600;padding:4px 12px;border-radius:999px;background:var(--paper);color:var(--slate)}
-.trial{display:inline-block;margin-top:14px;background:var(--mint);border-radius:12px;padding:10px 16px;font-weight:600}
+.dash{padding:36px 0 72px}
+.dash h1{font-size:clamp(30px,5vw,44px);font-weight:800}
+.trial{display:inline-block;margin-top:12px;background:var(--mint);border-radius:12px;padding:8px 14px;font-weight:600;font-size:15px}
 #state{padding:80px 0;color:var(--slate);font-size:19px}
-@media(max-width:700px){.dgrid{grid-template-columns:1fr}}
+.chat{margin-top:24px;background:#fff;border:1.5px solid var(--line);border-radius:22px;overflow:hidden}
+.chat-log{height:min(520px,62vh);overflow-y:auto;padding:18px;display:flex;flex-direction:column;gap:12px;background:#EAE6DF}
+.b{max-width:90%;padding:10px 14px;border-radius:16px;font-size:16px;line-height:1.45;white-space:pre-wrap;overflow-wrap:anywhere}
+.b.you{align-self:flex-end;background:var(--mint);border-bottom-right-radius:4px}
+.b.bot{align-self:flex-start;background:#fff;border-bottom-left-radius:4px}
+.b.typing{color:var(--slate);font-style:italic}
+.plan{margin:10px 0 4px;white-space:normal}
+.pi{padding:10px 12px;background:var(--paper);border-left:4px solid var(--blue);border-radius:6px;font-size:14px}
+.pi+.pi{margin-top:8px}
+.pi b{display:block;font-size:12px;color:var(--slate);font-weight:600}
+.pt{font-weight:600;font-size:15px}
+.pf{display:flex;gap:8px;margin-top:4px;font-size:14px}
+.pk{color:var(--slate);min-width:84px;flex:none}
+.pv{overflow-wrap:anywhere;white-space:pre-wrap}
+.ask{margin-top:8px;white-space:normal}
+.choices{display:flex;gap:8px;margin-top:8px}
+.choices button{flex:1;padding:9px 0;border-radius:8px;font:600 15px var(--body);border:1.5px solid var(--line);background:#fff;color:var(--ink);cursor:pointer}
+.choices button.yes{background:var(--blue);color:#fff;border-color:var(--blue)}
+.choices button:disabled{opacity:.5;cursor:default}
+.decided{font-size:14px;font-weight:600;color:var(--slate);margin-top:8px}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chips button{font:500 14px var(--body);padding:8px 12px;border-radius:999px;border:1.5px solid var(--line);background:#fff;cursor:pointer;text-align:left}
+.chips button:hover{border-color:var(--blue)}
+.composer{display:flex;gap:10px;padding:12px;border-top:1px solid var(--line);align-items:flex-end}
+.composer textarea{flex:1;font:16px var(--body);padding:10px 12px;border:1.5px solid var(--line);border-radius:12px;resize:none;background:var(--paper);color:var(--ink);min-height:46px;max-height:140px}
+.composer textarea:focus{outline:3px solid var(--blue);outline-offset:1px;background:#fff}
+.composer .btn{padding:12px 22px;width:auto}
+.composer .btn:disabled{opacity:.5;cursor:default}
+.sec{margin-top:44px}
+.sec h2{font-size:26px;font-weight:800;margin-bottom:14px}
+.muted{color:var(--slate);font-size:16px}
+.act{background:#fff;border:1.5px solid var(--line);border-radius:14px;padding:14px 18px;display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap;align-items:center}
+.act+.act{margin-top:10px}
+.act b{display:block;font-size:12px;color:var(--slate);font-weight:600}
+.act .when{font-size:13px;color:var(--slate)}
+.pill{font-size:13px;font-weight:600;padding:4px 12px;border-radius:999px;background:#FFF4D6}
+.pill.done{background:var(--mint)}
+.dgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}
+.dcard{background:#fff;border:1.5px solid var(--line);border-radius:18px;padding:22px}
+.dcard h3{font-size:20px;margin-bottom:6px}
+.dcard p{color:var(--slate);font-size:15px}
+.tag{display:inline-block;margin-top:12px;font-size:13px;font-weight:600;padding:4px 12px;border-radius:999px;background:var(--paper);color:var(--slate)}
+@media(max-width:700px){.dgrid{grid-template-columns:1fr}.b{max-width:95%}}
 </style>
 <div class="wrap dash">
   <div id="state" role="status">Loading your account...</div>
   <div id="dash" style="display:none">
     <h1 id="hello"></h1>
-    <p class="sub" style="color:var(--slate);margin-top:10px" id="planline"></p>
     <div class="trial" id="trial"></div>
-    <div class="dgrid">
-      <div class="dcard"><h3>Connect your Google account</h3><p>So Loopin can use Gmail, Calendar, Tasks, Docs and Sheets for you.</p><span class="tag">Coming next</span></div>
-      <div class="dcard"><h3>Connect your WhatsApp</h3><p>So you can message your assistant like a real contact.</p><span class="tag">Coming next</span></div>
-      <div class="dcard"><h3>Choose which chats Loopin sees</h3><p>Every client chat is off until you switch it on.</p><span class="tag">Coming next</span></div>
-      <div class="dcard"><h3>Your assistant's personality</h3><p>Professional, formal, friendly or casual. You pick.</p><span class="tag">Coming next</span></div>
+
+    <div class="chat">
+      <div class="chat-log" id="chatlog" aria-live="polite"></div>
+      <form class="composer" id="chatform">
+        <textarea id="chatinput" rows="1" maxlength="1000" placeholder="Tell Loopin what you need..." aria-label="Message Loopin"></textarea>
+        <button class="btn btn-primary" id="chatsend" type="submit">Send</button>
+      </form>
+    </div>
+
+    <div class="sec">
+      <h2>Activity</h2>
+      <div id="activity"><p class="muted">Loading...</p></div>
+    </div>
+
+    <div class="sec">
+      <h2>Coming next</h2>
+      <div class="dgrid">
+        <div class="dcard"><h3>Connect your Google account</h3><p>So Loopin can use Gmail, Calendar, Tasks, Docs and Sheets for you.</p><span class="tag">Next</span></div>
+        <div class="dcard"><h3>Connect your WhatsApp</h3><p>So you can message your assistant like a real contact.</p><span class="tag">Coming</span></div>
+        <div class="dcard"><h3>Choose which chats Loopin sees</h3><p>Every client chat is off until you switch it on.</p><span class="tag">Coming</span></div>
+        <div class="dcard"><h3>Your assistant's personality</h3><p>Professional, formal, friendly or casual. You pick.</p><span class="tag">Coming</span></div>
+      </div>
     </div>
   </div>
 </div>
@@ -98,21 +151,148 @@ footer{padding:36px 0;background:#0C1A2C;color:#8FA1B9;font-size:15px}
 <script src="config.js"></script>
 <script>
 (function(){
+  var TYPE_LABEL={calendar_event:'Calendar event',email:'Email',task:'Task',reminder:'Reminder',invoice:'Invoice',doc:'Google Doc',sheet_row:'Sheet row'};
+  var EXAMPLES=['Set up a call with Ada on Friday at 3pm and email her the agenda','Remind me tomorrow at 9 to call the bank','Send Tola an invoice for $400 for the logo package','Draft an email to my supplier about the delayed delivery'];
   var state=document.getElementById('state');
+  var log=document.getElementById('chatlog'),form=document.getElementById('chatform'),input=document.getElementById('chatinput'),sendBtn=document.getElementById('chatsend');
+  var history=[],busy=false,pending=null,firstName='there',fullName='',tz='UTC';
+  try{tz=Intl.DateTimeFormat().resolvedOptions().timeZone||'UTC';}catch(e){}
+
+  function el(tag,cls,text){var n=document.createElement(tag);if(cls)n.className=cls;if(text!==undefined)n.textContent=text;return n;}
+  function down(){log.scrollTop=log.scrollHeight;}
+  function bubble(kind,text){var b=el('div','b '+kind,text);log.appendChild(b);down();return b;}
+  function pretty(k){var s=k.replace(/_/g,' ');return s.charAt(0).toUpperCase()+s.slice(1);}
+
+  function closePlan(p,text){
+    p.done=true;p.box.textContent='';p.box.appendChild(el('div','decided',text));
+  }
+  function setButtons(p,off){Array.prototype.forEach.call(p.box.querySelectorAll('button'),function(b){b.disabled=off;});}
+
+  function renderPlan(bot,actions){
+    var plan=el('div','plan');
+    actions.forEach(function(a){
+      var item=el('div','pi');
+      item.appendChild(el('b','',TYPE_LABEL[a.type]||a.type));
+      item.appendChild(el('div','pt',a.title));
+      Object.keys(a.fields).forEach(function(k){
+        if(!a.fields[k])return;
+        var row=el('div','pf');row.appendChild(el('span','pk',pretty(k)));row.appendChild(el('span','pv',a.fields[k]));item.appendChild(row);
+      });
+      plan.appendChild(item);
+    });
+    bot.appendChild(plan);
+    bot.appendChild(el('div','ask','Approve this plan?'));
+    var box=el('div','choices');
+    var yes=el('button','yes','Yes'),edit=el('button','','Edit'),no=el('button','','No');
+    yes.type=edit.type=no.type='button';
+    box.appendChild(yes);box.appendChild(edit);box.appendChild(no);
+    bot.appendChild(box);
+    var p={actions:actions,box:box,done:false};
+    pending=p;
+    yes.onclick=function(){approve(p);};
+    edit.onclick=function(){input.placeholder='Tell me what to change...';input.focus();};
+    no.onclick=function(){
+      if(p.done)return;
+      closePlan(p,'Cancelled');
+      bubble('bot','Cancelled. Nothing was saved.');
+      history.push({role:'user',content:'No, cancel that plan.'});
+      history.push({role:'assistant',content:JSON.stringify({reply:'Cancelled.',actions:[]})});
+      if(pending===p)pending=null;
+    };
+    down();
+  }
+
+  function approve(p){
+    if(p.done)return;
+    setButtons(p,true);
+    var rows=p.actions.map(function(a){return {type:a.type,title:a.title,details:a.fields};});
+    sb.from('activity').insert(rows).then(function(r){
+      if(r.error){setButtons(p,false);bubble('bot','I could not save that. Please try again.');return;}
+      closePlan(p,'Approved');
+      bubble('bot','Approved and saved to your activity list. Google is not connected yet, so nothing has been sent or booked. Once it is connected, I will carry these out.');
+      history.push({role:'user',content:'Yes, approved.'});
+      history.push({role:'assistant',content:JSON.stringify({reply:'Saved to your activity list.',actions:[]})});
+      if(pending===p)pending=null;
+      loadActivity();
+    }).catch(function(){setButtons(p,false);bubble('bot','I could not save that. Check your internet and try again.');});
+  }
+
+  function setBusy(v){busy=v;sendBtn.disabled=v;input.disabled=v;}
+
+  function send(text){
+    text=(text||'').trim();
+    if(!text||busy)return;
+    var chips=document.getElementById('chips');if(chips)chips.style.display='none';
+    if(pending&&!pending.done){closePlan(pending,'Replaced by your new message');pending=null;}
+    bubble('you',text);
+    history.push({role:'user',content:text});
+    input.value='';input.placeholder='Tell Loopin what you need...';
+    setBusy(true);
+    var typing=bubble('bot typing','Loopin is thinking...');
+    sb.auth.getSession().then(function(r){
+      var session=r.data&&r.data.session;
+      if(!session){location.href='login.html';throw new Error('no session');}
+      return fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+session.access_token},
+        body:JSON.stringify({messages:history.slice(-12),timezone:tz,name:fullName})});
+    }).then(function(res){
+      return res.json().catch(function(){return {};}).then(function(data){return {status:res.status,data:data};});
+    }).then(function(o){
+      typing.remove();
+      if(o.status===401){location.href='login.html';return;}
+      if(o.status!==200||!o.data.reply){
+        history.pop();
+        bubble('bot',o.status===429?'Loopin is busy right now. Please wait a moment and try again.':'I could not think that through just now. Please try again.');
+        return;
+      }
+      history.push({role:'assistant',content:JSON.stringify({reply:o.data.reply,actions:o.data.actions||[]})});
+      var bot=bubble('bot',o.data.reply);
+      if(o.data.actions&&o.data.actions.length)renderPlan(bot,o.data.actions);
+    }).catch(function(){
+      typing.remove();
+      if(history.length&&history[history.length-1].role==='user')history.pop();
+      bubble('bot','I could not connect. Check your internet and try again.');
+    }).then(function(){setBusy(false);input.focus();});
+  }
+
+  form.addEventListener('submit',function(e){e.preventDefault();send(input.value);});
+  input.addEventListener('keydown',function(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();send(input.value);}});
+
+  function loadActivity(){
+    var list=document.getElementById('activity');
+    sb.from('activity').select('id,type,title,status,created_at').order('created_at',{ascending:false}).limit(20).then(function(r){
+      list.textContent='';
+      if(r.error){list.appendChild(el('p','muted','Could not load your activity. Refresh the page.'));return;}
+      if(!r.data.length){list.appendChild(el('p','muted','Nothing yet. Plans you approve will show up here.'));return;}
+      r.data.forEach(function(a){
+        var row=el('div','act'),left=el('div','');
+        left.appendChild(el('b','',TYPE_LABEL[a.type]||a.type));
+        left.appendChild(el('div','',a.title));
+        left.appendChild(el('div','when',new Date(a.created_at).toLocaleString(undefined,{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})));
+        var pill=el('span','pill'+(a.status==='done'?' done':''),a.status==='done'?'Done':a.status==='failed'?'Failed':'Approved, waiting for Google');
+        row.appendChild(left);row.appendChild(pill);list.appendChild(row);
+      });
+    }).catch(function(){list.textContent='';list.appendChild(el('p','muted','Could not load your activity. Check your internet.'));});
+  }
+
   document.getElementById('logout').addEventListener('click',function(e){
     e.preventDefault();sb.auth.signOut().then(function(){location.href='index.html';});
   });
+
   sb.auth.getSession().then(function(r){
     var session=r.data&&r.data.session;
     if(!session){location.href='login.html';return;}
     return sb.from('profiles').select('full_name,plan,trial_ends_at').eq('id',session.user.id).single().then(function(p){
       if(p.error||!p.data){state.textContent='We could not load your account. Refresh the page, or log out and log in again.';return;}
-      var d=p.data,first=(d.full_name||'there').split(' ')[0];
-      document.getElementById('hello').textContent='Welcome, '+first+'.';
-      document.getElementById('planline').textContent='You are on the '+(d.plan==='pro'?'Pro':'Starter')+' plan.';
+      var d=p.data;fullName=d.full_name||'';firstName=(fullName||'there').split(' ')[0];
+      document.getElementById('hello').textContent='Welcome, '+firstName+'.';
       var days=Math.max(0,Math.ceil((new Date(d.trial_ends_at)-new Date())/86400000));
-      document.getElementById('trial').textContent=days>0?('Free trial: '+days+' day'+(days===1?'':'s')+' left'):'Your free trial has ended';
+      document.getElementById('trial').textContent=(d.plan==='pro'?'Pro':'Starter')+' plan. '+(days>0?('Free trial: '+days+' day'+(days===1?'':'s')+' left'):'Your free trial has ended');
       state.style.display='none';document.getElementById('dash').style.display='block';
+      bubble('bot','Hi '+firstName+'. Tell me what you need and I will prepare it. I will always ask before anything happens.');
+      var chips=el('div','chips');chips.id='chips';
+      EXAMPLES.forEach(function(t){var b=el('button','',t);b.type='button';b.onclick=function(){send(t);};chips.appendChild(b);});
+      log.appendChild(chips);
+      loadActivity();
     });
   }).catch(function(){state.textContent='Could not connect. Check your internet and refresh the page.';});
 })();
