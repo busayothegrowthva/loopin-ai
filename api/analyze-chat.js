@@ -35,7 +35,7 @@ A commitment is one of these, and only these types:
 - calendar_event: a confirmed date or time. Fields: title, date (YYYY-MM-DD), start_time (HH:MM, 24-hour), duration_minutes, attendees, notes
 - task: a deadline or deliverable someone promised. Fields: title, due_date (YYYY-MM-DD), notes
 - reminder: something to remember at a specific time. Fields: title, remind_at (YYYY-MM-DD HH:MM, 24-hour)
-- invoice: an agreed price or payment. Fields: client, amount, currency, description, due_date (YYYY-MM-DD)
+- invoice: an agreed price or payment. Fields: client, client_email (leave empty if it is not in the conversation), amount, currency, description, due_date (YYYY-MM-DD)
 
 Rules:
 - Only include things that are clearly agreed or promised. Skip questions, maybes, ideas and small talk.

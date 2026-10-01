@@ -1,6 +1,7 @@
 // Carries out approved plans in the founder's Google account.
 const crypto = require('crypto');
 const lib = require('./_lib');
+const invoices = require('./_invoice');
 
 const EMAIL_RE = /[^\s,;<>"']+@[^\s,;<>"']+\.[^\s,;<>"']+/g;
 
@@ -137,7 +138,7 @@ async function sheetRow(token, title, f) {
   return { status: 'done', message: 'Row added to "' + name + '"' + (created ? ' (new sheet created).' : '.'), link: 'https://docs.google.com/spreadsheets/d/' + id + '/edit' };
 }
 
-async function runAction(row, token, tz) {
+async function runAction(row, token, tz, userId) {
   const f = {};
   const d = row.details && typeof row.details === 'object' ? row.details : {};
   Object.keys(d).forEach((k) => { f[k] = typeof d[k] === 'string' ? d[k] : str(d[k], 2000); });
@@ -149,7 +150,8 @@ async function runAction(row, token, tz) {
       case 'task': return await task(token, row.title, f);
       case 'doc': return await doc(token, row.title, f);
       case 'sheet_row': return await sheetRow(token, row.title, f);
-      default: return { status: 'skipped', message: 'Invoices arrive with Revenue Sync, which is coming soon. This one is saved.' };
+      case 'invoice': return await invoices.createAndSend(row, token, userId);
+      default: return { status: 'skipped', message: 'This type of plan is saved but not carried out yet.' };
     }
   } catch (e) {
     return bad('Something went wrong on our side. Please try again.');
@@ -182,7 +184,7 @@ module.exports = async function handler(req, res) {
 
   const results = [];
   for (const row of rows || []) {
-    const out = await runAction(row, g.token, tz);
+    const out = await runAction(row, g.token, tz, user.id);
     try {
       await lib.db('activity?id=eq.' + row.id, {
         method: 'PATCH',
