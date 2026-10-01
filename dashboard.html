@@ -147,6 +147,16 @@ footer{padding:36px 0;background:#0C1A2C;color:#8FA1B9;font-size:15px}
 .paste textarea:focus{outline:3px solid var(--blue);outline-offset:1px;background:#fff}
 .paste .btn{width:auto;margin-top:10px;padding:11px 22px}
 .paste .btn:disabled{opacity:.5;cursor:default}
+.mic{flex:none;width:46px;height:46px;border-radius:50%;border:1.5px solid var(--line);background:#fff;color:var(--ink);cursor:pointer;display:grid;place-items:center}
+.mic:hover{border-color:var(--blue)}
+.mic.rec{background:#B3261E;border-color:#B3261E;color:#fff}
+.mic:disabled{opacity:.5;cursor:default}
+.rectime{display:none;font-weight:600;color:#B3261E;font-size:15px;align-self:center}
+.rectime.on{display:block}
+.tonebox{background:#fff;border:1.5px solid var(--line);border-radius:18px;padding:22px;max-width:560px}
+.tonebox .field:last-of-type{margin-bottom:10px}
+.tonebox .sample{background:var(--paper);border-radius:10px;padding:12px 14px;font-size:15px;color:var(--slate)}
+.tonebox .tstatus{margin-top:10px;font-size:14px;color:var(--mint-deep);font-weight:600;min-height:20px}
 @media(max-width:700px){.dgrid{grid-template-columns:1fr}.b{max-width:95%}}
 </style>
 <div class="wrap dash">
@@ -161,8 +171,22 @@ footer{padding:36px 0;background:#0C1A2C;color:#8FA1B9;font-size:15px}
       <div class="chat-log" id="chatlog" aria-live="polite"></div>
       <form class="composer" id="chatform">
         <textarea id="chatinput" rows="1" maxlength="1000" placeholder="Tell Loopin what you need..." aria-label="Message Loopin"></textarea>
+        <span class="rectime" id="rectime" aria-live="polite"></span>
+        <button class="mic" id="mic" type="button" aria-label="Record a voice note" title="Record a voice note"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v4"/></svg></button>
         <button class="btn btn-primary" id="chatsend" type="submit">Send</button>
       </form>
+    </div>
+
+    <div class="sec">
+      <h2>Your assistant's personality</h2>
+      <div class="tonebox">
+        <div class="field"><label for="toneA">How Loopin talks to you</label>
+          <select id="toneA"><option value="professional">Professional</option><option value="formal">Formal</option><option value="friendly">Friendly</option><option value="casual">Casual</option></select></div>
+        <div class="field"><label for="toneE">How Loopin writes emails to your clients</label>
+          <select id="toneE"><option value="professional">Professional</option><option value="formal">Formal</option><option value="friendly">Friendly</option><option value="casual">Casual</option></select></div>
+        <div class="sample" id="toneSample"></div>
+        <div class="tstatus" id="toneStatus" aria-live="polite"></div>
+      </div>
     </div>
 
     <div class="sec">
@@ -185,7 +209,6 @@ footer{padding:36px 0;background:#0C1A2C;color:#8FA1B9;font-size:15px}
       <div class="dgrid">
         <div class="dcard"><h3>Connect your WhatsApp</h3><p>So you can message your assistant like a real contact.</p><span class="tag">Coming</span></div>
         <div class="dcard"><h3>Choose which chats Loopin sees</h3><p>Every client chat is off until you switch it on.</p><span class="tag">Coming</span></div>
-        <div class="dcard"><h3>Your assistant's personality</h3><p>Professional, formal, friendly or casual. You pick.</p><span class="tag">Coming</span></div>
       </div>
     </div>
   </div>
@@ -341,12 +364,12 @@ footer{padding:36px 0;background:#0C1A2C;color:#8FA1B9;font-size:15px}
   /* ---------- Chat ---------- */
   function setBusy(v){busy=v;sendBtn.disabled=v;input.disabled=v;}
 
-  function send(text){
+  function send(text,label){
     text=(text||'').trim();
     if(!text||busy)return;
     var chips=document.getElementById('chips');if(chips)chips.style.display='none';
     if(pending&&!pending.done){closePlan(pending,'Replaced by your new message');pending=null;}
-    bubble('you',text);
+    bubble('you',label||text);
     history.push({role:'user',content:text});
     input.value='';input.placeholder='Tell Loopin what you need...';
     setBusy(true);
@@ -398,6 +421,76 @@ footer{padding:36px 0;background:#0C1A2C;color:#8FA1B9;font-size:15px}
   document.getElementById('logout').addEventListener('click',function(e){
     e.preventDefault();sb.auth.signOut().then(function(){location.href='index.html';});
   });
+
+  /* ---------- Voice notes ---------- */
+  var rec=null,recChunks=[],recTimer=null,recStart=0,recStream=null;
+  var micBtn=document.getElementById('mic'),recTime=document.getElementById('rectime');
+  function pickMime(){
+    var c=['audio/webm;codecs=opus','audio/webm','audio/mp4','audio/ogg;codecs=opus'];
+    for(var i=0;i<c.length;i++){if(MediaRecorder.isTypeSupported(c[i]))return c[i];}
+    return '';
+  }
+  function setRecUI(on){micBtn.classList.toggle('rec',on);recTime.classList.toggle('on',on);micBtn.setAttribute('aria-label',on?'Stop recording':'Record a voice note');if(!on)recTime.textContent='';}
+  function initVoice(){
+    if(!(navigator.mediaDevices&&navigator.mediaDevices.getUserMedia&&window.MediaRecorder)){micBtn.style.display='none';return;}
+    micBtn.onclick=function(){if(rec&&rec.state==='recording'){rec.stop();}else{startRec();}};
+  }
+  function startRec(){
+    if(busy)return;
+    navigator.mediaDevices.getUserMedia({audio:true}).then(function(stream){
+      recStream=stream;var mime=pickMime();
+      rec=mime?new MediaRecorder(stream,{mimeType:mime}):new MediaRecorder(stream);recChunks=[];
+      rec.ondataavailable=function(e){if(e.data&&e.data.size)recChunks.push(e.data);};
+      rec.onstop=function(){
+        clearInterval(recTimer);setRecUI(false);recStream.getTracks().forEach(function(t){t.stop();});
+        var type=rec.mimeType||mime||'audio/webm';
+        if(Date.now()-recStart<800){bubble('bot','That was too short. Tap the mic, speak, then tap it again.');return;}
+        sendVoice(new Blob(recChunks,{type:type}),type);
+      };
+      rec.start();recStart=Date.now();setRecUI(true);
+      recTimer=setInterval(function(){
+        var s=Math.floor((Date.now()-recStart)/1000);
+        recTime.textContent=Math.floor(s/60)+':'+('0'+(s%60)).slice(-2);
+        if(s>=60&&rec&&rec.state==='recording')rec.stop();
+      },250);
+    }).catch(function(){bubble('bot','I could not use your microphone. Allow microphone access in your browser, then try again.');});
+  }
+  function sendVoice(blob,type){
+    setBusy(true);
+    var working=bubble('bot typing','Listening to your voice note...');
+    var reader=new FileReader();
+    reader.onerror=function(){working.remove();setBusy(false);bubble('bot','I could not read that recording. Please try again.');};
+    reader.onload=function(){
+      var b64=String(reader.result).split(',')[1]||'';
+      post('/api/voice',{audio:b64,mime:type}).then(function(o){
+        working.remove();setBusy(false);
+        if(o.status===401){location.href='login.html';return;}
+        if(o.status!==200){bubble('bot',o.status===429?'Loopin is busy right now. Please wait a moment and try again.':o.status===413?'That voice note is too long. Keep it under a minute.':'I could not turn that voice note into text. Please try again.');return;}
+        var text=(o.data.text||'').trim();
+        if(!text){bubble('bot','I could not hear anything in that voice note. Please try again.');return;}
+        send('(Voice note) '+text,'Voice note: '+text);
+      }).catch(function(){working.remove();setBusy(false);bubble('bot','I could not connect. Check your internet and try again.');});
+    };
+    reader.readAsDataURL(blob);
+  }
+
+  /* ---------- Personality ---------- */
+  var SAMPLES={professional:"Reminder: your call with Ada begins at 3:00 PM today.",formal:"Good afternoon. Your call with Ada is scheduled for 3:00 PM.",friendly:"Heads up! Your call with Ada is at 3 today. You have got this.",casual:"Call with Ada at 3. Do not forget!"};
+  function loadTone(uid){
+    var ta=document.getElementById('toneA'),te=document.getElementById('toneE'),sample=document.getElementById('toneSample'),st=document.getElementById('toneStatus');
+    function show(){sample.textContent='Example: "'+SAMPLES[ta.value]+'"';}
+    function save(){
+      show();st.style.color='var(--slate)';st.textContent='Saving...';
+      sb.from('profiles').update({assistant_tone:ta.value,email_tone:te.value}).eq('id',uid).then(function(r){
+        st.style.color=r.error?'#B3261E':'var(--mint-deep)';st.textContent=r.error?'Could not save. Please try again.':'Saved.';
+      }).catch(function(){st.style.color='#B3261E';st.textContent='Could not save. Check your internet.';});
+    }
+    sb.from('profiles').select('assistant_tone,email_tone').eq('id',uid).single().then(function(r){
+      if(r.data){ta.value=r.data.assistant_tone||'professional';te.value=r.data.email_tone||'professional';}
+      show();
+    }).catch(show);
+    ta.onchange=save;te.onchange=save;
+  }
 
   /* ---------- Client chats and permission switches ---------- */
   var chats=[];
@@ -513,6 +606,8 @@ footer{padding:36px 0;background:#0C1A2C;color:#8FA1B9;font-size:15px}
         log.appendChild(chips);
         loadActivity();
         loadChats();
+        initVoice();
+        loadTone(session.user.id);
       });
     });
   }).catch(function(){state.textContent='Could not connect. Check your internet and refresh the page.';});
