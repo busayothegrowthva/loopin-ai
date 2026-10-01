@@ -157,6 +157,15 @@ footer{padding:36px 0;background:#0C1A2C;color:#8FA1B9;font-size:15px}
 .tonebox .field:last-of-type{margin-bottom:10px}
 .tonebox .sample{background:var(--paper);border-radius:10px;padding:12px 14px;font-size:15px;color:var(--slate)}
 .tonebox .tstatus{margin-top:10px;font-size:14px;color:var(--mint-deep);font-weight:600;min-height:20px}
+.paybox{margin-top:16px}
+.paybox .row{display:flex;gap:10px;flex-wrap:wrap}
+.paybox input{flex:1;min-width:200px;font:16px var(--body);padding:11px 14px;border:1.5px solid var(--line);border-radius:10px;background:var(--paper);color:var(--ink)}
+.paybox input:focus{outline:3px solid var(--blue);outline-offset:1px;background:#fff}
+.paybox .btn{width:auto;padding:11px 22px}
+.paybox small{display:block;color:var(--slate);font-size:13px;margin-top:6px}
+.invbtns{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.invbtns button{font:600 13px var(--body);padding:6px 12px;border-radius:999px;border:1.5px solid var(--line);background:#fff;color:var(--ink);cursor:pointer}
+.invbtns button:disabled{opacity:.5;cursor:default}
 @media(max-width:700px){.dgrid{grid-template-columns:1fr}.b{max-width:95%}}
 </style>
 <div class="wrap dash">
@@ -187,6 +196,17 @@ footer{padding:36px 0;background:#0C1A2C;color:#8FA1B9;font-size:15px}
         <div class="sample" id="toneSample"></div>
         <div class="tstatus" id="toneStatus" aria-live="polite"></div>
       </div>
+      <div class="tonebox paybox">
+        <label for="paylink" style="font-weight:600;font-size:15px;display:block;margin-bottom:6px">Your payment link</label>
+        <div class="row"><input id="paylink" type="url" maxlength="500" placeholder="https://paystack.com/pay/your-link"><button class="btn btn-primary" id="paysave" type="button">Save</button></div>
+        <small>Loopin puts this link in the invoices it sends. Use a link from Paystack, Stripe, Flutterwave or any provider.</small>
+        <div class="tstatus" id="paystatus" aria-live="polite"></div>
+      </div>
+    </div>
+
+    <div class="sec">
+      <h2>Invoices</h2>
+      <div id="invoices"><p class="muted">Loading...</p></div>
     </div>
 
     <div class="sec">
@@ -297,6 +317,7 @@ footer{padding:36px 0;background:#0C1A2C;color:#8FA1B9;font-size:15px}
         if(!a.fields[k])return;
         var row=el('div','pf');row.appendChild(el('span','pk',pretty(k)));row.appendChild(el('span','pv',a.fields[k]));item.appendChild(row);
       });
+      if(a.type==='invoice')item.appendChild(el('div','ev','Also: one polite reminder can go out after 5 days if it is unpaid.'));
       if(a.evidence)item.appendChild(el('div','ev','From the chat: "'+a.evidence+'"'));
       if(a.confidence==='low'||a.confidence==='medium')item.appendChild(el('span','warn',a.confidence==='low'?'Check this one carefully':'Please double-check'));
       plan.appendChild(item);
@@ -357,7 +378,7 @@ footer{padding:36px 0;background:#0C1A2C;color:#8FA1B9;font-size:15px}
         var a=r.link?safeLink(r.link,'Open'):null;if(a)line.appendChild(a);
         b.appendChild(line);
       });
-      down();loadActivity();
+      down();loadActivity();loadInvoices();
     }).catch(function(){working.remove();bubble('bot','Your plan is saved, but I could not reach the server. Please try again.');loadActivity();});
   }
 
@@ -492,6 +513,59 @@ footer{padding:36px 0;background:#0C1A2C;color:#8FA1B9;font-size:15px}
     ta.onchange=save;te.onchange=save;
   }
 
+  /* ---------- Invoices and payment link ---------- */
+  function fmtMoney(a,c){try{return new Intl.NumberFormat('en',{style:'currency',currency:c}).format(a);}catch(e){return a+' '+c;}}
+  function loadInvoices(){
+    var box=document.getElementById('invoices');
+    sb.from('invoices').select('id,number,client_name,amount,currency,status,sent_at').order('sent_at',{ascending:false}).limit(20).then(function(r){
+      box.textContent='';
+      if(r.error){box.appendChild(el('p','muted','Could not load your invoices. Refresh the page.'));return;}
+      if(!r.data.length){box.appendChild(el('p','muted','No invoices yet. When you approve an invoice plan, it appears here.'));return;}
+      r.data.forEach(function(v){
+        var row=el('div','act'),left=el('div','');
+        left.appendChild(el('b','',v.number));
+        left.appendChild(el('div','',v.client_name+'  |  '+fmtMoney(Number(v.amount),v.currency)));
+        left.appendChild(el('div','when','Sent '+new Date(v.sent_at).toLocaleDateString(undefined,{day:'numeric',month:'short'})));
+        if(v.status!=='paid'){
+          var bt=el('div','invbtns'),paid=el('button','','Mark as paid'),rem=el('button','','Send reminder');
+          paid.type=rem.type='button';
+          paid.onclick=function(){
+            paid.disabled=rem.disabled=true;
+            sb.from('invoices').update({status:'paid',paid_at:new Date().toISOString()}).eq('id',v.id).then(function(x){
+              if(x.error){paid.disabled=rem.disabled=false;bubble('bot','I could not update that invoice. Please try again.');return;}
+              loadInvoices();
+            });
+          };
+          rem.onclick=function(){
+            if(!confirm('Send a polite reminder to '+v.client_name+' now?'))return;
+            paid.disabled=rem.disabled=true;rem.textContent='Sending...';
+            post('/api/invoices',{invoice_id:v.id,action:'remind'}).then(function(o){
+              bubble('bot',o.status===200?o.data.message:(o.data&&o.data.message)||'I could not send that reminder. Please try again.');
+              document.querySelector('.chat').scrollIntoView({behavior:'smooth',block:'center'});
+              loadInvoices();
+            }).catch(function(){paid.disabled=rem.disabled=false;rem.textContent='Send reminder';bubble('bot','I could not connect. Please try again.');});
+          };
+          bt.appendChild(paid);bt.appendChild(rem);left.appendChild(bt);
+        }
+        var label=v.status==='paid'?'Paid':v.status==='reminded'?'Reminder sent':'Sent, unpaid';
+        row.appendChild(left);row.appendChild(el('span','pill'+(v.status==='paid'?' done':''),label));
+        box.appendChild(row);
+      });
+    }).catch(function(){box.textContent='';box.appendChild(el('p','muted','Could not load your invoices. Check your internet.'));});
+  }
+  function loadPayLink(uid){
+    var inp=document.getElementById('paylink'),btn=document.getElementById('paysave'),st=document.getElementById('paystatus');
+    sb.from('profiles').select('payment_link').eq('id',uid).single().then(function(r){if(r.data&&r.data.payment_link)inp.value=r.data.payment_link;}).catch(function(){});
+    btn.onclick=function(){
+      var v=inp.value.trim();
+      if(v&&v.indexOf('https://')!==0){st.style.color='#B3261E';st.textContent='The link must start with https://';return;}
+      st.style.color='var(--slate)';st.textContent='Saving...';
+      sb.from('profiles').update({payment_link:v||null}).eq('id',uid).then(function(r){
+        st.style.color=r.error?'#B3261E':'var(--mint-deep)';st.textContent=r.error?'Could not save. Please try again.':'Saved.';
+      }).catch(function(){st.style.color='#B3261E';st.textContent='Could not save. Check your internet.';});
+    };
+  }
+
   /* ---------- Client chats and permission switches ---------- */
   var chats=[];
   var TOGGLES=[
@@ -606,8 +680,10 @@ footer{padding:36px 0;background:#0C1A2C;color:#8FA1B9;font-size:15px}
         log.appendChild(chips);
         loadActivity();
         loadChats();
+        loadInvoices();
         initVoice();
         loadTone(session.user.id);
+        loadPayLink(session.user.id);
       });
     });
   }).catch(function(){state.textContent='Could not connect. Check your internet and refresh the page.';});

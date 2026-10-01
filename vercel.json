@@ -1,6 +1,14 @@
 {
   "cleanUrls": true,
   "functions": {
-    "api/*.js": { "maxDuration": 30 }
-  }
+    "api/*.js": {
+      "maxDuration": 30
+    }
+  },
+  "crons": [
+    {
+      "path": "/api/followups",
+      "schedule": "0 8 * * *"
+    }
+  ]
 }
