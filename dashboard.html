@@ -119,6 +119,34 @@ footer{padding:36px 0;background:#0C1A2C;color:#8FA1B9;font-size:15px}
 .dcard h3{font-size:20px;margin-bottom:6px}
 .dcard p{color:var(--slate);font-size:15px}
 .tag{display:inline-block;margin-top:12px;font-size:13px;font-weight:600;padding:4px 12px;border-radius:999px;background:var(--paper);color:var(--slate)}
+.ev{margin-top:6px;font-size:13px;color:var(--slate);font-style:italic;overflow-wrap:anywhere}
+.warn{display:inline-block;margin-top:6px;font-size:12px;font-weight:600;padding:2px 10px;border-radius:999px;background:#FBE4E2;color:#B3261E}
+.addchat{display:flex;gap:10px;flex-wrap:wrap}
+.addchat input{flex:1;min-width:200px;font:16px var(--body);padding:11px 14px;border:1.5px solid var(--line);border-radius:10px;background:#fff;color:var(--ink)}
+.addchat input:focus{outline:3px solid var(--blue);outline-offset:1px}
+.addchat .btn{width:auto;padding:11px 22px}
+.ccard{background:#fff;border:1.5px solid var(--line);border-radius:18px;padding:20px 22px;margin-top:14px}
+.chead{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.chead h3{font-size:20px}
+.linkbtn{background:none;border:0;color:var(--slate);font:500 14px var(--body);cursor:pointer;text-decoration:underline}
+.trow{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:12px 0;border-bottom:1px solid var(--line)}
+.trow small{display:block;color:var(--slate);font-size:13px;line-height:1.3}
+.trow .soon{font-size:12px;font-weight:600;color:var(--slate);background:var(--paper);padding:2px 8px;border-radius:999px;margin-left:6px}
+.switch{position:relative;width:50px;height:28px;flex:none}
+.switch input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;z-index:2}
+.switch input:disabled{cursor:default}
+.switch i{position:absolute;inset:0;background:#C5CDDA;border-radius:999px;transition:background .2s}
+.switch i::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;background:#fff;border-radius:50%;transition:transform .2s}
+.switch input:checked+i{background:var(--mint-deep)}
+.switch input:checked+i::after{transform:translateX(22px)}
+.switch input:disabled+i{opacity:.45}
+.switch input:focus-visible+i{outline:3px solid var(--blue);outline-offset:3px}
+.cstatus{margin-top:12px;font-size:14px;padding:10px 14px;border-radius:10px;background:var(--paper);color:var(--slate)}
+.paste{margin-top:14px}
+.paste textarea{width:100%;min-height:120px;font:16px var(--body);padding:12px 14px;border:1.5px solid var(--line);border-radius:12px;background:var(--paper);color:var(--ink);resize:vertical}
+.paste textarea:focus{outline:3px solid var(--blue);outline-offset:1px;background:#fff}
+.paste .btn{width:auto;margin-top:10px;padding:11px 22px}
+.paste .btn:disabled{opacity:.5;cursor:default}
 @media(max-width:700px){.dgrid{grid-template-columns:1fr}.b{max-width:95%}}
 </style>
 <div class="wrap dash">
@@ -135,6 +163,16 @@ footer{padding:36px 0;background:#0C1A2C;color:#8FA1B9;font-size:15px}
         <textarea id="chatinput" rows="1" maxlength="1000" placeholder="Tell Loopin what you need..." aria-label="Message Loopin"></textarea>
         <button class="btn btn-primary" id="chatsend" type="submit">Send</button>
       </form>
+    </div>
+
+    <div class="sec">
+      <h2>Client chats</h2>
+      <p class="muted" style="margin-bottom:14px">Loopin reads a client chat only after you switch it on. Every new chat starts switched off.</p>
+      <form class="addchat" id="addchat">
+        <input id="chatname" type="text" maxlength="100" placeholder="Client name, for example Ada" aria-label="Client name">
+        <button class="btn btn-primary" type="submit">Add chat</button>
+      </form>
+      <div id="chats"></div>
     </div>
 
     <div class="sec">
@@ -236,6 +274,8 @@ footer{padding:36px 0;background:#0C1A2C;color:#8FA1B9;font-size:15px}
         if(!a.fields[k])return;
         var row=el('div','pf');row.appendChild(el('span','pk',pretty(k)));row.appendChild(el('span','pv',a.fields[k]));item.appendChild(row);
       });
+      if(a.evidence)item.appendChild(el('div','ev','From the chat: "'+a.evidence+'"'));
+      if(a.confidence==='low'||a.confidence==='medium')item.appendChild(el('span','warn',a.confidence==='low'?'Check this one carefully':'Please double-check'));
       plan.appendChild(item);
     });
     bot.appendChild(plan);
@@ -359,6 +399,100 @@ footer{padding:36px 0;background:#0C1A2C;color:#8FA1B9;font-size:15px}
     e.preventDefault();sb.auth.signOut().then(function(){location.href='index.html';});
   });
 
+  /* ---------- Client chats and permission switches ---------- */
+  var chats=[];
+  var TOGGLES=[
+    ['commitment_sync','Commitment Sync','Turn agreements into tasks and events',true],
+    ['revenue_sync','Revenue Sync','Invoices from agreed prices',false],
+    ['consistency_watch','Consistency Watch','Track repeated promises',false],
+    ['accuracy_watch','Accuracy Watch','Check answers against your facts',false]
+  ];
+  function loadChats(){
+    sb.from('client_chats').select('id,name,commitment_sync,revenue_sync,consistency_watch,accuracy_watch').order('created_at',{ascending:false}).then(function(r){
+      if(r.error){var box=document.getElementById('chats');box.textContent='';box.appendChild(el('p','muted','Could not load your chats. Refresh the page.'));return;}
+      chats=r.data||[];renderChats();
+    }).catch(function(){});
+  }
+  function statusText(c){
+    var on=TOGGLES.filter(function(t){return c[t[0]];}).map(function(t){return t[1];});
+    return on.length?'Loopin can read this chat for: '+on.join(', ')+'.':'Loopin cannot see this chat.';
+  }
+  function renderChats(){
+    var box=document.getElementById('chats');box.textContent='';
+    if(!chats.length){box.appendChild(el('p','muted','No client chats yet. Add one above to get started.'));return;}
+    chats.forEach(function(c){
+      var card=el('div','ccard');
+      var head=el('div','chead');head.appendChild(el('h3','',c.name));
+      var del=el('button','linkbtn','Delete');del.type='button';
+      del.onclick=function(){
+        if(!confirm('Delete the chat with '+c.name+' and everything Loopin saved from it?'))return;
+        sb.from('client_chats').delete().eq('id',c.id).then(function(r){
+          if(r.error){bubble('bot','I could not delete that chat. Please try again.');return;}
+          chats=chats.filter(function(x){return x.id!==c.id;});renderChats();
+        });
+      };
+      head.appendChild(del);card.appendChild(head);
+      var status=el('div','cstatus',statusText(c));status.setAttribute('aria-live','polite');
+      TOGGLES.forEach(function(t){
+        var row=el('label','trow'),left=el('span','');
+        left.appendChild(document.createTextNode(t[1]));
+        if(!t[3])left.appendChild(el('span','soon','Soon'));
+        left.appendChild(el('small','',t[2]));
+        var sw=el('span','switch'),inp=document.createElement('input');inp.type='checkbox';inp.checked=!!c[t[0]];inp.disabled=!t[3];
+        inp.onchange=function(){
+          var want=inp.checked,patch={};patch[t[0]]=want;inp.disabled=true;
+          sb.from('client_chats').update(patch).eq('id',c.id).then(function(r){
+            if(r.error){inp.checked=!want;inp.disabled=false;bubble('bot','I could not change that switch. Please try again.');return;}
+            c[t[0]]=want;renderChats();
+          });
+        };
+        sw.appendChild(inp);sw.appendChild(document.createElement('i'));
+        row.appendChild(left);row.appendChild(sw);card.appendChild(row);
+      });
+      card.appendChild(status);
+      var paste=el('div','paste');
+      if(c.commitment_sync){
+        var ta=document.createElement('textarea');ta.maxLength=6000;ta.placeholder='Paste the conversation with '+c.name+' here...';ta.setAttribute('aria-label','Conversation with '+c.name);
+        var go=el('button','btn btn-primary','Find commitments');go.type='button';
+        go.onclick=function(){analyze(c,ta,go);};
+        paste.appendChild(ta);paste.appendChild(go);
+      }else{
+        paste.appendChild(el('p','muted','Switch on Commitment Sync to let Loopin read this chat. Until then, Loopin does nothing with it.'));
+      }
+      card.appendChild(paste);box.appendChild(card);
+    });
+  }
+  document.getElementById('addchat').addEventListener('submit',function(e){
+    e.preventDefault();
+    var inp=document.getElementById('chatname'),name=inp.value.trim();
+    if(!name)return;
+    sb.from('client_chats').insert({name:name}).select('id,name,commitment_sync,revenue_sync,consistency_watch,accuracy_watch').then(function(r){
+      if(r.error||!r.data){bubble('bot','I could not add that chat. Please try again.');return;}
+      inp.value='';chats.unshift(r.data[0]);renderChats();
+    }).catch(function(){bubble('bot','I could not add that chat. Check your internet and try again.');});
+  });
+  function analyze(c,ta,btn){
+    var text=ta.value.trim();
+    if(text.length<5){ta.focus();return;}
+    if(busy)return;
+    if(pending&&!pending.done){closePlan(pending,'Replaced by a new chat reading');pending=null;}
+    btn.disabled=true;btn.textContent='Reading...';
+    var typing=bubble('bot typing','Loopin is reading the chat with '+c.name+'...');
+    document.querySelector('.chat').scrollIntoView({behavior:'smooth',block:'center'});
+    post('/api/analyze-chat',{chat_id:c.id,text:text,timezone:tz,name:fullName}).then(function(o){
+      typing.remove();
+      if(o.status===401){location.href='login.html';return;}
+      if(o.status===403){bubble('bot','Commitment Sync is switched off for '+c.name+', so I did not read it.');return;}
+      if(o.status!==200||!o.data.summary){bubble('bot',o.status===429?'Loopin is busy right now. Please wait a moment and try again.':'I could not read that chat just now. Please try again.');return;}
+      ta.value='';
+      var acts=o.data.actions||[];
+      history.push({role:'user',content:'I gave you part of my chat with '+c.name+' to find commitments.'});
+      history.push({role:'assistant',content:JSON.stringify({reply:o.data.summary,actions:acts.map(function(a){return {type:a.type,title:a.title,fields:a.fields};})})});
+      var bot=bubble('bot',o.data.summary);
+      if(acts.length)renderPlan(bot,acts);
+    }).catch(function(){typing.remove();bubble('bot','I could not connect. Check your internet and try again.');}).then(function(){btn.disabled=false;btn.textContent='Find commitments';});
+  }
+
   /* ---------- Start ---------- */
   sb.auth.getSession().then(function(r){
     var session=r.data&&r.data.session;
@@ -378,6 +512,7 @@ footer{padding:36px 0;background:#0C1A2C;color:#8FA1B9;font-size:15px}
         EXAMPLES.forEach(function(t){var b=el('button','',t);b.type='button';b.onclick=function(){send(t);};chips.appendChild(b);});
         log.appendChild(chips);
         loadActivity();
+        loadChats();
       });
     });
   }).catch(function(){state.textContent='Could not connect. Check your internet and refresh the page.';});
