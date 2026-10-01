@@ -570,7 +570,7 @@ footer{padding:36px 0;background:#0C1A2C;color:#8FA1B9;font-size:15px}
   var chats=[];
   var TOGGLES=[
     ['commitment_sync','Commitment Sync','Turn agreements into tasks and events',true],
-    ['revenue_sync','Revenue Sync','Invoices from agreed prices',false],
+    ['revenue_sync','Revenue Sync','Invoices from agreed prices',true],
     ['consistency_watch','Consistency Watch','Track repeated promises',true],
     ['accuracy_watch','Accuracy Watch','Check answers against your facts',false]
   ];
@@ -618,12 +618,12 @@ footer{padding:36px 0;background:#0C1A2C;color:#8FA1B9;font-size:15px}
       });
       card.appendChild(status);
       var paste=el('div','paste');
-      if(c.commitment_sync||c.consistency_watch){
+      if(c.commitment_sync||c.revenue_sync||c.consistency_watch){
         var ta=document.createElement('textarea');ta.maxLength=6000;ta.placeholder='Paste the conversation with '+c.name+' here...';ta.setAttribute('aria-label','Conversation with '+c.name);
         paste.appendChild(ta);
         var btns=el('div','invbtns');
-        if(c.commitment_sync){
-          var go=el('button','btn btn-primary','Find commitments');go.type='button';
+        if(c.commitment_sync||c.revenue_sync){
+          var go=el('button','btn btn-primary',c.commitment_sync?'Find commitments':'Find agreed prices');go.type='button';
           go.onclick=function(){analyze(c,ta,go);};btns.appendChild(go);
         }
         if(c.consistency_watch){
@@ -651,13 +651,13 @@ footer{padding:36px 0;background:#0C1A2C;color:#8FA1B9;font-size:15px}
     if(text.length<5){ta.focus();return;}
     if(busy)return;
     if(pending&&!pending.done){closePlan(pending,'Replaced by a new chat reading');pending=null;}
-    btn.disabled=true;btn.textContent='Reading...';
+    var label=btn.textContent;btn.disabled=true;btn.textContent='Reading...';
     var typing=bubble('bot typing','Loopin is reading the chat with '+c.name+'...');
     document.querySelector('.chat').scrollIntoView({behavior:'smooth',block:'center'});
     post('/api/analyze-chat',{chat_id:c.id,text:text,timezone:tz,name:fullName}).then(function(o){
       typing.remove();
       if(o.status===401){location.href='login.html';return;}
-      if(o.status===403){bubble('bot','Commitment Sync is switched off for '+c.name+', so I did not read it.');return;}
+      if(o.status===403){bubble('bot','The switches for '+c.name+' are off, so I did not read it.');return;}
       if(o.status!==200||!o.data.summary){bubble('bot',o.status===429?'Loopin is busy right now. Please wait a moment and try again.':'I could not read that chat just now. Please try again.');return;}
       ta.value='';
       var acts=o.data.actions||[];
@@ -665,7 +665,7 @@ footer{padding:36px 0;background:#0C1A2C;color:#8FA1B9;font-size:15px}
       history.push({role:'assistant',content:JSON.stringify({reply:o.data.summary,actions:acts.map(function(a){return {type:a.type,title:a.title,fields:a.fields};})})});
       var bot=bubble('bot',o.data.summary);
       if(acts.length)renderPlan(bot,acts);
-    }).catch(function(){typing.remove();bubble('bot','I could not connect. Check your internet and try again.');}).then(function(){btn.disabled=false;btn.textContent='Find commitments';});
+    }).catch(function(){typing.remove();bubble('bot','I could not connect. Check your internet and try again.');}).then(function(){btn.disabled=false;btn.textContent=label;});
   }
 
   function watch(c,ta,btn){

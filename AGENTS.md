@@ -43,7 +43,7 @@ Plus the assistant commands: schedule meetings, draft and send email, reminders,
 
 ### Two rules that must never be broken
 - **Approval rule:** Loopin never sends, books or creates anything without the founder choosing Yes. Plans show Yes / Edit / No. (The invoice plan also covers one 5-day reminder, and says so on the card.)
-- **Permission rule:** the four background features (Commitment Sync, Revenue Sync, Consistency Watch, Accuracy Watch) work **only on client chats the founder has switched on, per chat and per feature. Everything starts OFF.** The check is enforced on the server (see `api/analyze-chat.js`), not just in the interface.
+- **Permission rule:** the four background features (Commitment Sync, Revenue Sync, Consistency Watch, Accuracy Watch) work **only on client chats the founder has switched on, per chat and per feature. Everything starts OFF.** The check is enforced on the server (see `api/analyze-chat.js`), not just in the interface. Each switch controls its own kind of plan when reading a client chat: Commitment Sync allows calendar events, tasks and reminders; Revenue Sync allows invoices; Consistency Watch has its own endpoint. An invoice the founder types in the main assistant chat needs no switch, because the founder is giving the instruction themselves. Accuracy Watch switch is still locked until that feature is built.
 
 ### Pricing (shown on the landing page)
 - Starter $19 per month: assistant, Gmail/Calendar/Tasks/Docs/Sheets, reminders, Voice Sync, Commitment Sync on up to 5 chats.
