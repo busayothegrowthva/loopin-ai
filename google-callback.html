@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Privacy Policy | Loopin AI</title>
+<title>Connecting Google | Loopin AI</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
@@ -59,42 +59,49 @@ footer{padding:36px 0;background:#0C1A2C;color:#8FA1B9;font-size:15px}
 <body>
 <nav><div class="wrap nav-in">
 <a class="logo" href="index.html"><span class="logo-mark"></span>Loopin AI</a>
-<div class="nav-links"><a href="index.html">Home</a><a href="index.html#pricing">Pricing</a><a href="login.html">Log in</a><a class="btn btn-primary" href="signup.html">Start free trial</a></div>
+<div class="nav-links"><a href="dashboard.html">Back to dashboard</a></div>
 </div></nav>
 <main>
-<div class="wrap"><div class="legal">
-<h1>Privacy Policy</h1>
-<p class="date">Last updated: 29 September 2026</p>
-<p>Loopin AI is an assistant that works inside WhatsApp and your Google account. This page explains what we collect, why, and the control you have.</p>
-<h2>What we collect</h2>
-<ul>
-<li><b>Your account details:</b> your name, email address and password (stored in protected form).</li>
-<li><b>Your connected tools:</b> when you connect your Google account, we access only the Gmail, Calendar, Tasks, Docs and Sheets features needed to do what you ask. Loopin reads your email or calendar only when you ask a question about them, and we do not store what it reads. In Google Drive, Loopin can only open files it creates itself. We keep a secure connection token so Loopin can act for you until you disconnect Google, which you can do at any time from your dashboard.</li>
-<li><b>Your WhatsApp messages:</b> messages you send directly to Loopin. Client chats are read only if you switch Loopin on for that specific chat.</li>
-<li><b>Payment details:</b> handled by our payment provider. We never see or store your full card number.</li>
-</ul>
-<h2>Your control over client chats</h2>
-<p>Loopin is off by default for every client chat. Commitment Sync, Revenue Sync, Consistency Watch and Accuracy Watch each work only on chats you have switched on. When you switch a chat off, Loopin stops reading it right away.</p>
-<h2>How we use your information</h2>
-<ul>
-<li>To carry out the tasks you ask for, such as booking a meeting or drafting an email.</li>
-<li>To understand messages using an AI provider. Only the text needed for the task is sent.</li>
-<li>To run your account, take payment and answer your questions.</li>
-</ul>
-<p>Loopin asks for your approval before it sends, books or creates anything on your behalf. We do not sell your data.</p>
-<h2>Keeping your data safe</h2>
-<p>Passwords and access keys are stored securely, and connections are encrypted. No system is perfect, so we limit what we collect to what the product needs.</p>
-<h2>Your rights</h2>
-<p>You can disconnect Google or WhatsApp at any time, and you can ask us to delete your account and data. Send the request through our <a href="index.html#contact">contact form</a>.</p>
-<h2>Changes</h2>
-<p>If we change this policy, we will update the date at the top of this page.</p>
-<h2>Questions</h2>
-<p>Reach us any time through the <a href="index.html#contact">contact form</a>.</p>
-</div></div></main>
+<div class="wrap"><div class="card">
+<h1 id="title">Connecting Google...</h1>
+<p class="lead" id="msg">One moment.</p>
+<a class="btn btn-primary" id="back" href="dashboard.html" style="display:none">Back to dashboard</a>
+</div></div>
+</main>
 <footer><div class="wrap foot">
 <a class="logo" href="index.html"><span class="logo-mark"></span>Loopin AI</a>
 <div class="foot-links"><a href="index.html#features">Features</a><a href="index.html#pricing">Pricing</a><a href="index.html#faq">FAQ</a><a href="index.html#contact">Contact</a><a href="privacy.html">Privacy</a><a href="terms.html">Terms</a></div>
 <div>&copy; 2026 Loopin AI</div>
 </div></footer>
-
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script>
+(function(){
+  var title=document.getElementById('title'),msg=document.getElementById('msg'),back=document.getElementById('back');
+  var NAMES={'gmail.send':'sending email','gmail.readonly':'reading email','calendar.events':'your calendar','tasks':'Tasks','documents':'Docs','spreadsheets':'Sheets','drive.file':'files Loopin creates'};
+  function say(t,m,showBack){title.textContent=t;msg.textContent=m;if(showBack)back.style.display='block';}
+  var q=new URLSearchParams(location.search),code=q.get('code'),st=q.get('state'),err=q.get('error');
+  try{history.replaceState(null,'','google-callback');}catch(e){}
+  if(err){say('Google was not connected',err==='access_denied'?'You chose not to allow access, so nothing was connected.':'Google reported a problem ('+err+').',true);return;}
+  var saved=null;
+  try{saved=sessionStorage.getItem('gstate');sessionStorage.removeItem('gstate');}catch(e){}
+  if(!code||!st||!saved||st!==saved){say('This link is not valid','The connection link is invalid or has expired. Please go back and click Connect Google again.',true);return;}
+  sb.auth.getSession().then(function(r){
+    var s=r.data&&r.data.session;
+    if(!s){location.href='login.html';return;}
+    return fetch('/api/google-connect',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+s.access_token},body:JSON.stringify({code:code})})
+    .then(function(res){return res.json().catch(function(){return {};}).then(function(d){return {status:res.status,data:d};});})
+    .then(function(o){
+      if(o.status!==200){
+        var e=o.data.error;
+        say('Google was not connected',e==='no_refresh_token'?'Google did not give a lasting connection. Please go back, click Connect Google and allow everything.':e==='not_configured'?'The server is missing a setting. Please tell the site owner.':'Something went wrong while connecting. Please try again.',true);return;
+      }
+      var miss=(o.data.missing||[]).map(function(x){var k=x.replace('https://www.googleapis.com/auth/','');return NAMES[k]||k;});
+      if(miss.length){say('Connected, with limits','Connected as '+o.data.email+', but you did not allow: '+miss.join(', ')+'. Those features will not work. To fix it, disconnect and connect again, and tick every box.',true);return;}
+      say('Google connected','Connected as '+o.data.email+'. Taking you back to your dashboard...',true);
+      setTimeout(function(){location.href='dashboard.html';},1800);
+    });
+  }).catch(function(){say('Could not connect','Something went wrong. Check your internet and try again.',true);});
+})();
+</script>
 </body></html>

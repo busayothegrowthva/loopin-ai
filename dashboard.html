@@ -67,12 +67,20 @@ footer{padding:36px 0;background:#0C1A2C;color:#8FA1B9;font-size:15px}
 .dash h1{font-size:clamp(30px,5vw,44px);font-weight:800}
 .trial{display:inline-block;margin-top:12px;background:var(--mint);border-radius:12px;padding:8px 14px;font-weight:600;font-size:15px}
 #state{padding:80px 0;color:var(--slate);font-size:19px}
-.chat{margin-top:24px;background:#fff;border:1.5px solid var(--line);border-radius:22px;overflow:hidden}
+.gbar{margin-top:20px;background:#fff;border:1.5px solid var(--line);border-radius:16px;padding:14px 18px;display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap}
+.gbar.ok{border-color:var(--mint-deep)}
+.gbar .gt{font-size:15px;flex:1;min-width:200px}
+.gbar .gt small{display:block;color:#B3261E;margin-top:4px;font-size:13px}
+.gbar button{font:600 15px var(--body);padding:10px 20px;border-radius:999px;border:2px solid var(--blue);background:var(--blue);color:#fff;cursor:pointer}
+.gbar.ok button{background:transparent;color:var(--ink);border-color:var(--line)}
+.chat{margin-top:16px;background:#fff;border:1.5px solid var(--line);border-radius:22px;overflow:hidden}
 .chat-log{height:min(520px,62vh);overflow-y:auto;padding:18px;display:flex;flex-direction:column;gap:12px;background:#EAE6DF}
 .b{max-width:90%;padding:10px 14px;border-radius:16px;font-size:16px;line-height:1.45;white-space:pre-wrap;overflow-wrap:anywhere}
 .b.you{align-self:flex-end;background:var(--mint);border-bottom-right-radius:4px}
 .b.bot{align-self:flex-start;background:#fff;border-bottom-left-radius:4px}
 .b.typing{color:var(--slate);font-style:italic}
+.res{margin-top:6px;white-space:normal;font-size:15px}
+.res a{color:var(--blue);font-weight:600;margin-left:6px}
 .plan{margin:10px 0 4px;white-space:normal}
 .pi{padding:10px 12px;background:var(--paper);border-left:4px solid var(--blue);border-radius:6px;font-size:14px}
 .pi+.pi{margin-top:8px}
@@ -102,8 +110,10 @@ footer{padding:36px 0;background:#0C1A2C;color:#8FA1B9;font-size:15px}
 .act+.act{margin-top:10px}
 .act b{display:block;font-size:12px;color:var(--slate);font-weight:600}
 .act .when{font-size:13px;color:var(--slate)}
+.act .when a{color:var(--blue);font-weight:600;margin-left:6px}
 .pill{font-size:13px;font-weight:600;padding:4px 12px;border-radius:999px;background:#FFF4D6}
 .pill.done{background:var(--mint)}
+.pill.failed{background:#FBE4E2}
 .dgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}
 .dcard{background:#fff;border:1.5px solid var(--line);border-radius:18px;padding:22px}
 .dcard h3{font-size:20px;margin-bottom:6px}
@@ -116,6 +126,8 @@ footer{padding:36px 0;background:#0C1A2C;color:#8FA1B9;font-size:15px}
   <div id="dash" style="display:none">
     <h1 id="hello"></h1>
     <div class="trial" id="trial"></div>
+
+    <div class="gbar" id="gbar"></div>
 
     <div class="chat">
       <div class="chat-log" id="chatlog" aria-live="polite"></div>
@@ -133,7 +145,6 @@ footer{padding:36px 0;background:#0C1A2C;color:#8FA1B9;font-size:15px}
     <div class="sec">
       <h2>Coming next</h2>
       <div class="dgrid">
-        <div class="dcard"><h3>Connect your Google account</h3><p>So Loopin can use Gmail, Calendar, Tasks, Docs and Sheets for you.</p><span class="tag">Next</span></div>
         <div class="dcard"><h3>Connect your WhatsApp</h3><p>So you can message your assistant like a real contact.</p><span class="tag">Coming</span></div>
         <div class="dcard"><h3>Choose which chats Loopin sees</h3><p>Every client chat is off until you switch it on.</p><span class="tag">Coming</span></div>
         <div class="dcard"><h3>Your assistant's personality</h3><p>Professional, formal, friendly or casual. You pick.</p><span class="tag">Coming</span></div>
@@ -152,20 +163,67 @@ footer{padding:36px 0;background:#0C1A2C;color:#8FA1B9;font-size:15px}
 <script>
 (function(){
   var TYPE_LABEL={calendar_event:'Calendar event',email:'Email',task:'Task',reminder:'Reminder',invoice:'Invoice',doc:'Google Doc',sheet_row:'Sheet row'};
-  var EXAMPLES=['Set up a call with Ada on Friday at 3pm and email her the agenda','Remind me tomorrow at 9 to call the bank','Send Tola an invoice for $400 for the logo package','Draft an email to my supplier about the delayed delivery'];
+  var EXAMPLES=['Set up a call with Ada on Friday at 3pm and email her the agenda','Remind me tomorrow at 9 to call the bank',"What is on my calendar tomorrow?",'What is my most recent email?'];
+  var BASE='https://www.googleapis.com/auth/';
+  var REQUIRED=['gmail.send','gmail.readonly','calendar.events','tasks','documents','spreadsheets','drive.file'].map(function(x){return BASE+x;});
+  var ALL_SCOPES=['openid','email','profile'].concat(REQUIRED);
   var state=document.getElementById('state');
   var log=document.getElementById('chatlog'),form=document.getElementById('chatform'),input=document.getElementById('chatinput'),sendBtn=document.getElementById('chatsend');
-  var history=[],busy=false,pending=null,firstName='there',fullName='',tz='UTC';
+  var history=[],busy=false,pending=null,firstName='there',fullName='',tz='UTC',googleEmail='',googleScopes='';
   try{tz=Intl.DateTimeFormat().resolvedOptions().timeZone||'UTC';}catch(e){}
 
   function el(tag,cls,text){var n=document.createElement(tag);if(cls)n.className=cls;if(text!==undefined)n.textContent=text;return n;}
   function down(){log.scrollTop=log.scrollHeight;}
   function bubble(kind,text){var b=el('div','b '+kind,text);log.appendChild(b);down();return b;}
   function pretty(k){var s=k.replace(/_/g,' ');return s.charAt(0).toUpperCase()+s.slice(1);}
-
-  function closePlan(p,text){
-    p.done=true;p.box.textContent='';p.box.appendChild(el('div','decided',text));
+  function safeLink(url,label){
+    if(typeof url!=='string'||url.indexOf('https://')!==0)return null;
+    var a=el('a','',label||'Open');a.href=url;a.target='_blank';a.rel='noopener';return a;
   }
+  function post(url,payload){
+    return sb.auth.getSession().then(function(r){
+      var s=r.data&&r.data.session;
+      if(!s){location.href='login.html';throw new Error('no session');}
+      return fetch(url,{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+s.access_token},body:JSON.stringify(payload)});
+    }).then(function(res){
+      return res.json().catch(function(){return {};}).then(function(d){return {status:res.status,data:d};});
+    });
+  }
+
+  /* ---------- Google connection ---------- */
+  function renderGoogle(){
+    var bar=document.getElementById('gbar');bar.textContent='';
+    var t=el('div','gt'),btn=el('button','');btn.type='button';
+    if(googleEmail){
+      bar.className='gbar ok';
+      t.appendChild(document.createTextNode('Google connected: '+googleEmail));
+      var miss=REQUIRED.filter(function(s){return googleScopes.split(' ').indexOf(s)<0;});
+      if(miss.length)t.appendChild(el('small','','Some permissions were not allowed, so a few things may not work. Disconnect, then connect again and tick every box.'));
+      btn.textContent='Disconnect';btn.onclick=disconnectGoogle;
+    }else{
+      bar.className='gbar';
+      t.textContent='Connect your Google account so Loopin can book, email and create for you.';
+      btn.textContent='Connect Google';btn.onclick=connectGoogle;
+    }
+    bar.appendChild(t);bar.appendChild(btn);
+  }
+  function connectGoogle(){
+    var arr=new Uint8Array(16);crypto.getRandomValues(arr);
+    var st=Array.prototype.map.call(arr,function(b){return ('0'+b.toString(16)).slice(-2);}).join('');
+    try{sessionStorage.setItem('gstate',st);}catch(e){bubble('bot','Your browser blocked something Loopin needs. Please use a normal browser tab and try again.');return;}
+    var p=new URLSearchParams({client_id:window.GOOGLE_CLIENT_ID,redirect_uri:window.GOOGLE_REDIRECT,response_type:'code',scope:ALL_SCOPES.join(' '),access_type:'offline',prompt:'consent',include_granted_scopes:'true',state:st});
+    location.href='https://accounts.google.com/o/oauth2/v2/auth?'+p.toString();
+  }
+  function disconnectGoogle(){
+    if(!confirm('Disconnect Google? Loopin will stop being able to use your Google account.'))return;
+    post('/api/google-disconnect',{}).then(function(o){
+      if(o.status===200){googleEmail='';googleScopes='';renderGoogle();bubble('bot','Google disconnected. Loopin can no longer use your account.');}
+      else bubble('bot','I could not disconnect just now. Please try again.');
+    }).catch(function(){bubble('bot','I could not disconnect just now. Please try again.');});
+  }
+
+  /* ---------- Plans ---------- */
+  function closePlan(p,text){p.done=true;p.box.textContent='';p.box.appendChild(el('div','decided',text));}
   function setButtons(p,off){Array.prototype.forEach.call(p.box.querySelectorAll('button'),function(b){b.disabled=off;});}
 
   function renderPlan(bot,actions){
@@ -206,17 +264,41 @@ footer{padding:36px 0;background:#0C1A2C;color:#8FA1B9;font-size:15px}
     if(p.done)return;
     setButtons(p,true);
     var rows=p.actions.map(function(a){return {type:a.type,title:a.title,details:a.fields};});
-    sb.from('activity').insert(rows).then(function(r){
-      if(r.error){setButtons(p,false);bubble('bot','I could not save that. Please try again.');return;}
+    sb.from('activity').insert(rows).select('id').then(function(r){
+      if(r.error||!r.data){setButtons(p,false);bubble('bot','I could not save that. Please try again.');return;}
       closePlan(p,'Approved');
-      bubble('bot','Approved and saved to your activity list. Google is not connected yet, so nothing has been sent or booked. Once it is connected, I will carry these out.');
       history.push({role:'user',content:'Yes, approved.'});
-      history.push({role:'assistant',content:JSON.stringify({reply:'Saved to your activity list.',actions:[]})});
+      history.push({role:'assistant',content:JSON.stringify({reply:'Approved.',actions:[]})});
       if(pending===p)pending=null;
-      loadActivity();
+      if(!googleEmail){
+        bubble('bot','Approved and saved to your activity list. Google is not connected yet, so nothing has been sent or booked. Click Connect Google at the top and I will be able to carry these out.');
+        loadActivity();return;
+      }
+      runPlan(r.data.map(function(x){return x.id;}));
     }).catch(function(){setButtons(p,false);bubble('bot','I could not save that. Check your internet and try again.');});
   }
 
+  function runPlan(ids){
+    var working=bubble('bot typing','Working on it...');
+    post('/api/execute',{activity_ids:ids,timezone:tz}).then(function(o){
+      working.remove();
+      if(o.status===409){
+        bubble('bot',o.data.error==='expired'?'Your Google connection has expired. Please disconnect and connect Google again. Your plan is saved.':'Google is not connected properly. Please connect it again. Your plan is saved.');
+        loadActivity();return;
+      }
+      if(o.status!==200||!o.data.results){bubble('bot','Your plan is saved, but I could not carry it out just now. Please try again in a moment.');loadActivity();return;}
+      if(!o.data.results.length){bubble('bot','There was nothing new to carry out.');loadActivity();return;}
+      var b=bubble('bot','');
+      o.data.results.forEach(function(r){
+        var line=el('div','res',(r.status==='done'?'Done: ':r.status==='failed'?'Could not do "'+r.title+'": ':'Saved: ')+r.message);
+        var a=r.link?safeLink(r.link,'Open'):null;if(a)line.appendChild(a);
+        b.appendChild(line);
+      });
+      down();loadActivity();
+    }).catch(function(){working.remove();bubble('bot','Your plan is saved, but I could not reach the server. Please try again.');loadActivity();});
+  }
+
+  /* ---------- Chat ---------- */
   function setBusy(v){busy=v;sendBtn.disabled=v;input.disabled=v;}
 
   function send(text){
@@ -229,14 +311,7 @@ footer{padding:36px 0;background:#0C1A2C;color:#8FA1B9;font-size:15px}
     input.value='';input.placeholder='Tell Loopin what you need...';
     setBusy(true);
     var typing=bubble('bot typing','Loopin is thinking...');
-    sb.auth.getSession().then(function(r){
-      var session=r.data&&r.data.session;
-      if(!session){location.href='login.html';throw new Error('no session');}
-      return fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+session.access_token},
-        body:JSON.stringify({messages:history.slice(-12),timezone:tz,name:fullName})});
-    }).then(function(res){
-      return res.json().catch(function(){return {};}).then(function(data){return {status:res.status,data:data};});
-    }).then(function(o){
+    post('/api/chat',{messages:history.slice(-12),timezone:tz,name:fullName}).then(function(o){
       typing.remove();
       if(o.status===401){location.href='login.html';return;}
       if(o.status!==200||!o.data.reply){
@@ -257,9 +332,10 @@ footer{padding:36px 0;background:#0C1A2C;color:#8FA1B9;font-size:15px}
   form.addEventListener('submit',function(e){e.preventDefault();send(input.value);});
   input.addEventListener('keydown',function(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();send(input.value);}});
 
+  /* ---------- Activity ---------- */
   function loadActivity(){
     var list=document.getElementById('activity');
-    sb.from('activity').select('id,type,title,status,created_at').order('created_at',{ascending:false}).limit(20).then(function(r){
+    sb.from('activity').select('id,type,title,status,result,created_at').order('created_at',{ascending:false}).limit(20).then(function(r){
       list.textContent='';
       if(r.error){list.appendChild(el('p','muted','Could not load your activity. Refresh the page.'));return;}
       if(!r.data.length){list.appendChild(el('p','muted','Nothing yet. Plans you approve will show up here.'));return;}
@@ -267,8 +343,13 @@ footer{padding:36px 0;background:#0C1A2C;color:#8FA1B9;font-size:15px}
         var row=el('div','act'),left=el('div','');
         left.appendChild(el('b','',TYPE_LABEL[a.type]||a.type));
         left.appendChild(el('div','',a.title));
-        left.appendChild(el('div','when',new Date(a.created_at).toLocaleString(undefined,{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})));
-        var pill=el('span','pill'+(a.status==='done'?' done':''),a.status==='done'?'Done':a.status==='failed'?'Failed':'Approved, waiting for Google');
+        var when=el('div','when',new Date(a.created_at).toLocaleString(undefined,{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}));
+        var lines=(a.result&&a.result!=='running')?a.result.split('\n'):[];
+        if(lines[0]){when.textContent+='  |  '+lines[0];}
+        var lk=lines[1]?safeLink(lines[1],'Open'):null;if(lk)when.appendChild(lk);
+        left.appendChild(when);
+        var label=a.status==='done'?'Done':a.status==='failed'?'Failed':(a.result==='running'?'In progress':(a.result?'Approved':'Approved, waiting for Google'));
+        var pill=el('span','pill'+(a.status==='done'?' done':a.status==='failed'?' failed':''),label);
         row.appendChild(left);row.appendChild(pill);list.appendChild(row);
       });
     }).catch(function(){list.textContent='';list.appendChild(el('p','muted','Could not load your activity. Check your internet.'));});
@@ -278,6 +359,7 @@ footer{padding:36px 0;background:#0C1A2C;color:#8FA1B9;font-size:15px}
     e.preventDefault();sb.auth.signOut().then(function(){location.href='index.html';});
   });
 
+  /* ---------- Start ---------- */
   sb.auth.getSession().then(function(r){
     var session=r.data&&r.data.session;
     if(!session){location.href='login.html';return;}
@@ -287,12 +369,16 @@ footer{padding:36px 0;background:#0C1A2C;color:#8FA1B9;font-size:15px}
       document.getElementById('hello').textContent='Welcome, '+firstName+'.';
       var days=Math.max(0,Math.ceil((new Date(d.trial_ends_at)-new Date())/86400000));
       document.getElementById('trial').textContent=(d.plan==='pro'?'Pro':'Starter')+' plan. '+(days>0?('Free trial: '+days+' day'+(days===1?'':'s')+' left'):'Your free trial has ended');
-      state.style.display='none';document.getElementById('dash').style.display='block';
-      bubble('bot','Hi '+firstName+'. Tell me what you need and I will prepare it. I will always ask before anything happens.');
-      var chips=el('div','chips');chips.id='chips';
-      EXAMPLES.forEach(function(t){var b=el('button','',t);b.type='button';b.onclick=function(){send(t);};chips.appendChild(b);});
-      log.appendChild(chips);
-      loadActivity();
+      return sb.from('google_connections').select('google_email,scopes').maybeSingle().then(function(g){
+        if(g&&g.data){googleEmail=g.data.google_email||'your Google account';googleScopes=g.data.scopes||'';}
+        renderGoogle();
+        state.style.display='none';document.getElementById('dash').style.display='block';
+        bubble('bot','Hi '+firstName+'. Tell me what you need and I will prepare it. I will always ask before anything happens.');
+        var chips=el('div','chips');chips.id='chips';
+        EXAMPLES.forEach(function(t){var b=el('button','',t);b.type='button';b.onclick=function(){send(t);};chips.appendChild(b);});
+        log.appendChild(chips);
+        loadActivity();
+      });
     });
   }).catch(function(){state.textContent='Could not connect. Check your internet and refresh the page.';});
 })();
