@@ -124,13 +124,13 @@ Landing page (live), contact form, sign up, login, dashboard, assistant chat wit
 
 ### Built and mock-tested, awaiting the owner's live test
 Consistency Watch: `api/consistency.js` plus a "Check repeated promises" button on client chats that have the switch on. No new database setup or keys needed. It reads the saved text of that one chat, finds promises the founder made 2 or more times that still look unfinished, and offers a task for each (approved with Yes / Edit / No like everything else).
+Accuracy Watch (Business facts box saved in the founder's profile, per-chat accuracy switch, paste-in mismatch check against real prices and policies). The owner must: run `sql/7-accuracy.sql`, upload the files, then test the feature on the live app.
 
 ### Still to build, in this order
-1. **Accuracy Watch** (the founder stores real prices and policies; check a pasted bot or staff reply against them; flag mismatches).
-2. **Stripe subscriptions in test mode:** checkout for Starter and Pro with the 14-day trial, a webhook that records the subscription, plan gating (Starter limits such as 5 chats and Pro-only features), a billing section on the dashboard. The signup page currently collects a plan but takes no payment.
-3. **Landing page update:** show the new features honestly (voice, personality in four tones with the same reminder example, Google tools). Keep every claim true.
-4. **Polish:** test on a phone, empty and error states, forgot password, loading states, accessibility checks.
-5. **Demo video preparation:** a demo Google account with believable emails and calendar events.
+1. **Stripe subscriptions in test mode:** checkout for Starter and Pro with the 14-day trial, a webhook that records the subscription, plan gating (Starter limits such as 5 chats and Pro-only features), a billing section on the dashboard. The signup page currently collects a plan but takes no payment.
+2. **Landing page update:** show the new features honestly (voice, personality in four tones with the same reminder example, Google tools). Keep every claim true.
+3. **Polish:** test on a phone, empty and error states, forgot password, loading states, accessibility checks.
+4. **Demo video preparation:** a demo Google account with believable emails and calendar events.
 
 ### WhatsApp (blocked, but it is the heart of the product)
 The owner wants Loopin to be a real WhatsApp contact. The Meta developer app is blocked: the new business portfolio is "restricted from advertising", and review needs an ID the owner could not find. Until unlocked, the dashboard chat is the working assistant. Decision day was set for 3 October: if still blocked, use a WhatsApp demo alternative that does not need Meta's approval, or demo from the dashboard.

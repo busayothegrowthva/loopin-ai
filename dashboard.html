@@ -205,6 +205,18 @@ footer{padding:36px 0;background:#0C1A2C;color:#8FA1B9;font-size:15px}
     </div>
 
     <div class="sec">
+      <h2>Business facts</h2>
+      <div class="tonebox">
+        <p class="muted" style="margin-bottom:12px">Write the real truth about your business once here. Use plain English: prices, policies, opening hours, delivery times, return terms, response times, and other customer questions.</p>
+        <textarea id="businessFacts" rows="8" placeholder="Example: Free returns within 30 days. Logo package is $400. We reply within 24 hours." aria-label="Business facts"></textarea>
+        <div class="row" style="margin-top:12px;justify-content:flex-start;gap:10px;align-items:center;flex-wrap:wrap">
+          <button class="btn btn-primary" id="factsSave" type="button">Save facts</button>
+          <div class="tstatus" id="factsStatus" aria-live="polite"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="sec">
       <h2>Invoices</h2>
       <div id="invoices"><p class="muted">Loading...</p></div>
     </div>
@@ -513,6 +525,21 @@ footer{padding:36px 0;background:#0C1A2C;color:#8FA1B9;font-size:15px}
     ta.onchange=save;te.onchange=save;
   }
 
+  function loadBusinessFacts(uid){
+    var ta=document.getElementById('businessFacts'),st=document.getElementById('factsStatus');
+    if(!ta)return;
+    sb.from('profiles').select('business_facts').eq('id',uid).single().then(function(r){
+      if(r.data && typeof r.data.business_facts === 'string'){ta.value=r.data.business_facts;}
+    }).catch(function(){});
+    document.getElementById('factsSave').onclick=function(){
+      var v=ta.value.trim();
+      st.style.color='var(--slate)';st.textContent='Saving...';
+      sb.from('profiles').update({business_facts:v||null}).eq('id',uid).then(function(r){
+        st.style.color=r.error?'#B3261E':'var(--mint-deep)';st.textContent=r.error?'Could not save. Please try again.':'Saved.';
+      }).catch(function(){st.style.color='#B3261E';st.textContent='Could not save. Check your internet.';});
+    };
+  }
+
   /* ---------- Invoices and payment link ---------- */
   function fmtMoney(a,c){try{return new Intl.NumberFormat('en',{style:'currency',currency:c}).format(a);}catch(e){return a+' '+c;}}
   function loadInvoices(){
@@ -572,7 +599,7 @@ footer{padding:36px 0;background:#0C1A2C;color:#8FA1B9;font-size:15px}
     ['commitment_sync','Commitment Sync','Turn agreements into tasks and events',true],
     ['revenue_sync','Revenue Sync','Invoices from agreed prices',true],
     ['consistency_watch','Consistency Watch','Track repeated promises',true],
-    ['accuracy_watch','Accuracy Watch','Check answers against your facts',false]
+    ['accuracy_watch','Accuracy Watch','Check answers against your facts',true]
   ];
   function loadChats(){
     sb.from('client_chats').select('id,name,commitment_sync,revenue_sync,consistency_watch,accuracy_watch').order('created_at',{ascending:false}).then(function(r){
@@ -634,6 +661,15 @@ footer{padding:36px 0;background:#0C1A2C;color:#8FA1B9;font-size:15px}
       }else{
         paste.appendChild(el('p','muted','Switch on a feature above to let Loopin read this chat. Until then, Loopin does nothing with it.'));
       }
+      if(c.accuracy_watch){
+        var factBox=el('div','paste');
+        var factTa=document.createElement('textarea');factTa.maxLength=6000;factTa.placeholder='Paste what a bot or team member told '+c.name+' here...';factTa.setAttribute('aria-label','Customer message for accuracy check');
+        var factBtn=el('button','btn btn-primary','Check answer');factBtn.type='button';
+        factBtn.onclick=function(){checkAccuracy(c,factTa,factBtn);};
+        factBox.appendChild(el('p','muted','Accuracy Watch compares this reply against your saved Business facts.'));
+        factBox.appendChild(factTa);factBox.appendChild(factBtn);
+        card.appendChild(factBox);
+      }
       card.appendChild(paste);box.appendChild(card);
     });
   }
@@ -693,6 +729,33 @@ footer{padding:36px 0;background:#0C1A2C;color:#8FA1B9;font-size:15px}
     }).catch(function(){typing.remove();bubble('bot','I could not connect. Check your internet and try again.');}).then(function(){btn.disabled=false;btn.textContent='Check repeated promises';});
   }
 
+  function checkAccuracy(c,ta,btn){
+    var text=ta.value.trim();
+    if(text.length<5){ta.focus();return;}
+    btn.disabled=true;btn.textContent='Checking...';
+    var box=bubble('bot typing','Loopin is checking this answer against your Business facts...');
+    post('/api/accuracy-watch',{chat_id:c.id,text:text}).then(function(o){
+      box.remove();
+      if(o.status===401){location.href='login.html';return;}
+      if(o.status===403){bubble('bot','Accuracy Watch is switched off for '+c.name+', so I did not check it.');return;}
+      if(o.status===400 && o.data && o.data.error==='business_facts_missing'){bubble('bot','Your Business facts box is empty. Write down your real prices and policies first, then run the check again.');return;}
+      if(o.status!==200||!o.data.summary){bubble('bot',o.status===429?'Loopin is busy right now. Please wait a moment and try again.': 'I could not check that message against your facts. Please try again.');return;}
+      var result=bubble('bot',o.data.summary);
+      if(o.data.issues && o.data.issues.length){
+        var list=el('div','plan');
+        o.data.issues.forEach(function(issue){
+          var row=el('div','pi');
+          row.appendChild(el('b','',issue.claim || 'Mismatch'));
+          row.appendChild(el('div','pt',issue.mismatch || 'This does not match your facts.'));
+          if(issue.correction) row.appendChild(el('div','ev','Correct wording: "'+issue.correction+'"'));
+          list.appendChild(row);
+        });
+        result.appendChild(list);
+      }
+      ta.value='';
+    }).catch(function(){box.remove();bubble('bot','I could not connect. Check your internet and try again.');}).then(function(){btn.disabled=false;btn.textContent='Check answer';});
+  }
+
   /* ---------- Start ---------- */
   sb.auth.getSession().then(function(r){
     var session=r.data&&r.data.session;
@@ -716,6 +779,7 @@ footer{padding:36px 0;background:#0C1A2C;color:#8FA1B9;font-size:15px}
         loadInvoices();
         initVoice();
         loadTone(session.user.id);
+        loadBusinessFacts(session.user.id);
         loadPayLink(session.user.id);
       });
     });
