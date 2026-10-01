@@ -80,6 +80,7 @@ Main folder:
 - `_invoice.js` invoice and reminder emails, money parsing, sending through Gmail.
 - `chat.js` the assistant brain. Takes the conversation, returns `{reply, actions}`. Can run read-only lookups (recent email, calendar) and answers from them. Reads the user's tone settings.
 - `analyze-chat.js` Commitment Sync. Refuses if the chat's switch is off.
+- `consistency.js` Consistency Watch. Same server-side switch check. `_ai.js` holds shared AI helpers used by newer functions.
 - `execute.js` carries out approved plans in Google (calendar, reminder as a calendar popup, email, task, doc, sheet row, invoice).
 - `voice.js` voice note audio to text.
 - `invoices.js` the "Send reminder" button. `followups.js` the daily cron (needs `CRON_SECRET`).
@@ -119,18 +120,17 @@ Set in Vercel, project **Settings, Environment Variables, Project tab** (NOT the
 ## 9. Status
 
 ### Done and confirmed by the owner
-Landing page (live), contact form, sign up, login, dashboard, assistant chat with Yes / Edit / No, Google connection, Commitment Sync with per-chat permission switches, Voice Sync, personality settings (professional, formal, friendly, casual; one for talking to the founder, one for emails to clients).
+Landing page (live), contact form, sign up, login, dashboard, assistant chat with Yes / Edit / No, Google connection, Commitment Sync with per-chat permission switches, Voice Sync, personality settings (professional, formal, friendly, casual; one for talking to the founder, one for emails to clients), and Revenue Sync (invoice email, invoice list, reminder button, payment link; tested live by the owner).
 
 ### Built and mock-tested, awaiting the owner's live test
-Revenue Sync (invoice email, invoice list, reminder button, daily reminder job, payment link setting). The owner must: run `sql/6-revenue.sql`, add `CRON_SECRET`, upload the files.
+Consistency Watch: `api/consistency.js` plus a "Check repeated promises" button on client chats that have the switch on. No new database setup or keys needed. It reads the saved text of that one chat, finds promises the founder made 2 or more times that still look unfinished, and offers a task for each (approved with Yes / Edit / No like everything else).
 
 ### Still to build, in this order
-1. **Consistency Watch** (needs saved chat text per chat; only for chats with the switch on; flag the same promise made twice and still open).
-2. **Accuracy Watch** (the founder stores real prices and policies; check a pasted bot or staff reply against them; flag mismatches).
-3. **Stripe subscriptions in test mode:** checkout for Starter and Pro with the 14-day trial, a webhook that records the subscription, plan gating (Starter limits such as 5 chats and Pro-only features), a billing section on the dashboard. The signup page currently collects a plan but takes no payment.
-4. **Landing page update:** show the new features honestly (voice, personality in four tones with the same reminder example, Google tools). Keep every claim true.
-5. **Polish:** test on a phone, empty and error states, forgot password, loading states, accessibility checks.
-6. **Demo video preparation:** a demo Google account with believable emails and calendar events.
+1. **Accuracy Watch** (the founder stores real prices and policies; check a pasted bot or staff reply against them; flag mismatches).
+2. **Stripe subscriptions in test mode:** checkout for Starter and Pro with the 14-day trial, a webhook that records the subscription, plan gating (Starter limits such as 5 chats and Pro-only features), a billing section on the dashboard. The signup page currently collects a plan but takes no payment.
+3. **Landing page update:** show the new features honestly (voice, personality in four tones with the same reminder example, Google tools). Keep every claim true.
+4. **Polish:** test on a phone, empty and error states, forgot password, loading states, accessibility checks.
+5. **Demo video preparation:** a demo Google account with believable emails and calendar events.
 
 ### WhatsApp (blocked, but it is the heart of the product)
 The owner wants Loopin to be a real WhatsApp contact. The Meta developer app is blocked: the new business portfolio is "restricted from advertising", and review needs an ID the owner could not find. Until unlocked, the dashboard chat is the working assistant. Decision day was set for 3 October: if still blocked, use a WhatsApp demo alternative that does not need Meta's approval, or demo from the dashboard.

@@ -571,7 +571,7 @@ footer{padding:36px 0;background:#0C1A2C;color:#8FA1B9;font-size:15px}
   var TOGGLES=[
     ['commitment_sync','Commitment Sync','Turn agreements into tasks and events',true],
     ['revenue_sync','Revenue Sync','Invoices from agreed prices',false],
-    ['consistency_watch','Consistency Watch','Track repeated promises',false],
+    ['consistency_watch','Consistency Watch','Track repeated promises',true],
     ['accuracy_watch','Accuracy Watch','Check answers against your facts',false]
   ];
   function loadChats(){
@@ -618,13 +618,21 @@ footer{padding:36px 0;background:#0C1A2C;color:#8FA1B9;font-size:15px}
       });
       card.appendChild(status);
       var paste=el('div','paste');
-      if(c.commitment_sync){
+      if(c.commitment_sync||c.consistency_watch){
         var ta=document.createElement('textarea');ta.maxLength=6000;ta.placeholder='Paste the conversation with '+c.name+' here...';ta.setAttribute('aria-label','Conversation with '+c.name);
-        var go=el('button','btn btn-primary','Find commitments');go.type='button';
-        go.onclick=function(){analyze(c,ta,go);};
-        paste.appendChild(ta);paste.appendChild(go);
+        paste.appendChild(ta);
+        var btns=el('div','invbtns');
+        if(c.commitment_sync){
+          var go=el('button','btn btn-primary','Find commitments');go.type='button';
+          go.onclick=function(){analyze(c,ta,go);};btns.appendChild(go);
+        }
+        if(c.consistency_watch){
+          var wt=el('button','btn btn-primary','Check repeated promises');wt.type='button';
+          wt.onclick=function(){watch(c,ta,wt);};btns.appendChild(wt);
+        }
+        paste.appendChild(btns);
       }else{
-        paste.appendChild(el('p','muted','Switch on Commitment Sync to let Loopin read this chat. Until then, Loopin does nothing with it.'));
+        paste.appendChild(el('p','muted','Switch on a feature above to let Loopin read this chat. Until then, Loopin does nothing with it.'));
       }
       card.appendChild(paste);box.appendChild(card);
     });
@@ -658,6 +666,31 @@ footer{padding:36px 0;background:#0C1A2C;color:#8FA1B9;font-size:15px}
       var bot=bubble('bot',o.data.summary);
       if(acts.length)renderPlan(bot,acts);
     }).catch(function(){typing.remove();bubble('bot','I could not connect. Check your internet and try again.');}).then(function(){btn.disabled=false;btn.textContent='Find commitments';});
+  }
+
+  function watch(c,ta,btn){
+    var text=ta.value.trim();
+    if(busy)return;
+    if(pending&&!pending.done){closePlan(pending,'Replaced by a new check');pending=null;}
+    btn.disabled=true;btn.textContent='Checking...';
+    var typing=bubble('bot typing','Loopin is checking the history with '+c.name+'...');
+    document.querySelector('.chat').scrollIntoView({behavior:'smooth',block:'center'});
+    post('/api/consistency',{chat_id:c.id,text:text,timezone:tz,name:fullName}).then(function(o){
+      typing.remove();
+      if(o.status===401){location.href='login.html';return;}
+      if(o.status===403){bubble('bot','Consistency Watch is switched off for '+c.name+', so I did not read it.');return;}
+      if(o.status!==200||!o.data.summary){bubble('bot',o.status===429?'Loopin is busy right now. Please wait a moment and try again.':'I could not check that chat just now. Please try again.');return;}
+      ta.value='';
+      var acts=o.data.actions||[],alerts=o.data.alerts||[];
+      history.push({role:'user',content:'I asked you to check my history with '+c.name+' for repeated promises.'});
+      history.push({role:'assistant',content:JSON.stringify({reply:o.data.summary,actions:acts.map(function(a){return {type:a.type,title:a.title,fields:a.fields};})})});
+      var bot=bubble('bot',o.data.summary);
+      alerts.forEach(function(a){
+        bot.appendChild(el('div','res',a.message));
+        (a.evidence||[]).forEach(function(q){bot.appendChild(el('div','ev','"'+q+'"'));});
+      });
+      if(acts.length)renderPlan(bot,acts);
+    }).catch(function(){typing.remove();bubble('bot','I could not connect. Check your internet and try again.');}).then(function(){btn.disabled=false;btn.textContent='Check repeated promises';});
   }
 
   /* ---------- Start ---------- */
