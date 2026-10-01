@@ -4,6 +4,12 @@ const lib = require('./_lib');
 
 const MODEL = process.env.GROQ_MODEL || 'openai/gpt-oss-120b';
 const TYPES = ['calendar_event', 'email', 'task', 'reminder', 'invoice', 'doc', 'sheet_row'];
+const TONES = {
+  professional: 'clear, concise and businesslike. No slang.',
+  formal: 'polite and respectful. Full sentences, no contractions, formal greetings and sign-offs.',
+  friendly: "warm and upbeat. Natural and encouraging, using the founder's first name now and then.",
+  casual: 'relaxed and short, like texting a trusted colleague. Contractions are fine.'
+};
 
 function clean(v, max) {
   if (v === null || v === undefined) return '';
@@ -26,12 +32,19 @@ function nowText(tz) {
   }
 }
 
-function buildPrompt(now, name, googleConnected) {
+function buildPrompt(now, name, googleConnected, tones) {
+  tones = tones || {};
   return `You are Loopin, an AI executive assistant for a busy founder${name ? ' named ' + name : ''}. The founder messages you from their phone.
 
 You never act on your own. You prepare a plan, and the founder approves it with Yes, Edit or No before anything happens.
 
 Right now it is ${now.long} (${now.tz}). Today's date is ${now.iso}. The founder's Google account is ${googleConnected ? 'connected' : 'NOT connected yet'}.
+
+Tone for your replies to the founder: ${TONES[tones.assistant] || TONES.professional}
+Tone for emails you write to other people: ${TONES[tones.email] || TONES.professional}
+Tone only changes wording. It never changes facts, dates, amounts, or the rule that the founder approves every plan.
+
+Messages that begin with (Voice note) were transcribed from speech and may contain small mistakes. If a voice note is a reminder or instruction the founder is giving themselves, such as "remind me to call the supplier tomorrow", turn it into a reminder or task.
 
 Reply with ONE JSON object and nothing else. No code fences, no extra text:
 {"reply": "...", "actions": [ ... ], "lookup": null}
@@ -207,7 +220,13 @@ module.exports = async function handler(req, res) {
     connected = !!(rows && rows.length);
   } catch (e) { /* not set up yet: treat as not connected */ }
 
-  const messages = [{ role: 'system', content: buildPrompt(now, name, connected) }].concat(history);
+  let tones = {};
+  try {
+    const p = await lib.db('profiles?id=eq.' + user.id + '&select=assistant_tone,email_tone');
+    if (p && p[0]) tones = { assistant: p[0].assistant_tone, email: p[0].email_tone };
+  } catch (e) { /* defaults to professional */ }
+
+  const messages = [{ role: 'system', content: buildPrompt(now, name, connected, tones) }].concat(history);
 
   try {
     const parsed = await askParsed(key, messages);
