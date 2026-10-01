@@ -18,7 +18,7 @@ module.exports = async function handler(req, res) {
     await lib.db('squad_subscriptions?status=eq.active&renewal_claimed_at=lt.' + encodeURIComponent(staleClaim), {
       method: 'PATCH', body: { renewal_claimed_at: null }
     });
-    due = await lib.db('squad_subscriptions?status=eq.active&next_billing_at=lte.' + encodeURIComponent(now) + '&renewal_claimed_at=is.null&select=user_id,email,plan,squad_token_id,squad_auth_code,next_billing_at&limit=25');
+    due = await lib.db('squad_subscriptions?status=eq.active&squad_token_id=not.is.null&next_billing_at=lte.' + encodeURIComponent(now) + '&renewal_claimed_at=is.null&select=user_id,email,plan,squad_token_id,squad_auth_code,next_billing_at&limit=25');
   } catch (e) { return res.status(502).json({ error: 'db_error' }); }
 
   let renewed = 0, failed = 0, skipped = 0;

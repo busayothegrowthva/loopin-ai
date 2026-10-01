@@ -192,7 +192,7 @@ footer{padding:36px 0;background:#0C1A2C;color:#8FA1B9;font-size:15px}
           <button class="btn btn-primary" id="billingSubscribe" type="button">Subscribe now</button>
           <button class="btn" id="billingCancel" type="button" style="display:none">Cancel subscription</button>
         </div>
-        <p class="muted" style="font-size:13px;margin-top:8px">Subscribing now charges the selected monthly price through Squad and renews monthly until canceled. Your free trial remains free unless you choose to subscribe.</p>
+        <p class="muted" style="font-size:13px;margin-top:8px">Subscribing now charges the selected monthly price through Squad. Card payments renew automatically each month until canceled. Bank, USSD, and transfer payments are one month at a time; subscribe again to renew. Your free trial remains free unless you choose to subscribe.</p>
         <div class="tstatus" id="billingStatus" aria-live="polite"></div>
       </div>
     </div>
@@ -572,7 +572,7 @@ footer{padding:36px 0;background:#0C1A2C;color:#8FA1B9;font-size:15px}
       var badge=document.getElementById('trial');
       if(d.status==='active'){
         badge.textContent=(d.plan==='pro'?'Pro':'Starter')+' plan active.';
-        info.textContent=(d.plan==='pro'?'Pro':'Starter')+' plan is active. Next payment: '+(d.next_billing_at?new Date(d.next_billing_at).toLocaleDateString():'not scheduled yet')+'.';
+        info.textContent=(d.plan==='pro'?'Pro':'Starter')+' plan is active. '+(d.auto_renew?'Next automatic card payment: ':'Paid through ')+(d.next_billing_at?new Date(d.next_billing_at).toLocaleDateString():'not scheduled yet')+(d.auto_renew?'.':'. Renew manually to continue.');
         plan.disabled=true;btn.disabled=true;btn.textContent='Subscription active';cancel.style.display='inline-block';
       }else if(d.status==='trialing'){
         var days=Math.max(0,Math.ceil((new Date(d.trial_ends_at)-new Date())/86400000));
@@ -592,7 +592,7 @@ footer{padding:36px 0;background:#0C1A2C;color:#8FA1B9;font-size:15px}
       btn.disabled=true;btn.textContent='Opening Squad...';st.style.color='var(--slate)';st.textContent='';
       post('/api/squad-checkout',{plan:plan.value}).then(function(o){
         if(o.status===401){location.href='login.html';return;}
-        if(o.status!==200||!o.data.checkout_url){st.style.color='#B3261E';st.textContent=o.data&&o.data.error==='squad_not_configured'?'Payments are not configured yet.':'Could not start checkout. Please try again.';return;}
+        if(o.status!==200||!o.data.checkout_url){st.style.color='#B3261E';st.textContent=o.data&&o.data.error==='squad_not_configured'?'Payments are not configured yet.':o.data&&o.data.error==='checkout_in_progress'?'A checkout is already open. Finish it or wait 30 minutes before trying again.':'Could not start checkout. Please try again.';return;}
         location.href=o.data.checkout_url;
       }).catch(function(){st.style.color='#B3261E';st.textContent='Could not connect to checkout. Please try again.';}).then(function(){btn.disabled=false;btn.textContent='Subscribe now';});
     };

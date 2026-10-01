@@ -25,10 +25,17 @@ module.exports = async function handler(req, res) {
     const pending = await lib.db('squad_payments?user_id=eq.' + user.id + '&status=eq.pending&select=plan,transaction_ref,checkout_url');
     if (pending && pending.length) {
       const existing = pending[0];
-      if (existing.plan === plan && existing.checkout_url && new URL(existing.checkout_url).hostname === 'sandbox-pay.squadco.com') {
+      const currentVersion = existing.transaction_ref.startsWith('LOOPIN2');
+      if (existing.plan === plan && currentVersion && existing.checkout_url && new URL(existing.checkout_url).hostname === 'sandbox-pay.squadco.com') {
         return res.status(200).json({ checkout_url: existing.checkout_url, transaction_ref: existing.transaction_ref });
       }
-      return res.status(409).json({ error: 'checkout_already_started' });
+      if (existing.plan !== plan || !currentVersion) {
+        await lib.db('squad_payments?transaction_ref=eq.' + encodeURIComponent(existing.transaction_ref) + '&status=eq.pending', {
+          method: 'PATCH', body: { status: 'failed' }
+        });
+      } else {
+        return res.status(409).json({ error: 'checkout_in_progress' });
+      }
     }
     const transactionRef = squad.newReference();
     const rows = await lib.db('squad_payments', {
@@ -58,7 +65,7 @@ module.exports = async function handler(req, res) {
         initiate_type: 'inline',
         transaction_ref: transactionRef,
         callback_url: callback,
-        payment_channels: ['card'],
+        payment_channels: ['card', 'transfer', 'ussd', 'bank'],
         is_recurring: true,
         metadata: { source: 'loopin_subscription', user_id: user.id, plan }
       }

@@ -42,7 +42,7 @@ function nextMonth(from) {
 }
 
 function newReference() {
-  return 'LOOPIN' + Date.now() + require('crypto').randomBytes(6).toString('hex').toUpperCase();
+  return 'LOOPIN2' + Date.now() + require('crypto').randomBytes(6).toString('hex').toUpperCase();
 }
 
 async function verifiedTransaction(reference) {

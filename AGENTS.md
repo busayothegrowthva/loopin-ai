@@ -48,7 +48,7 @@ Plus the assistant commands: schedule meetings, draft and send email, reminders,
 ### Pricing (shown on the landing page)
 - Starter $19 per month: assistant, Gmail/Calendar/Tasks/Docs/Sheets, reminders, Voice Sync, Commitment Sync on up to 5 chats.
 - Pro $39 per month: everything in Starter, all five features on unlimited chats, Revenue Sync, Consistency Watch, Accuracy Watch.
-- 14-day free trial on both, no card needed. Trials do not auto-charge; users choose when to subscribe. Direct subscription charges immediately and renews monthly until canceled.
+- 14-day free trial on both, no card needed. Trials do not auto-charge; users choose when to subscribe. Direct subscription charges immediately. Squad card payments renew monthly until canceled; bank, USSD, and transfer payments cover one month at a time and require manual renewal.
 
 ## 4. Technology (and why)
 
@@ -128,7 +128,7 @@ Landing page (live), contact form, sign up, login, dashboard, assistant chat wit
 ### Built and mock-tested, awaiting the owner's live test
 Consistency Watch: `api/consistency.js` plus a "Check repeated promises" button on client chats that have the switch on. No new database setup or keys needed. It reads the saved text of that one chat, finds promises the founder made 2 or more times that still look unfinished, and offers a task for each (approved with Yes / Edit / No like everything else).
 Accuracy Watch (Business facts box saved in the founder's profile, per-chat accuracy switch, paste-in mismatch check against real prices and policies). The owner must: run `sql/7-accuracy.sql`, upload the files, then test the feature on the live app.
-Squad subscription portal is built for sandbox testing: signup offers the 14-day trial or immediate Starter/Pro checkout; verified payment handling, billing status, cancellation, server plan checks, Starter's five-chat cap, and a daily renewal job are included. The owner must: run `sql/8-billing.sql`, add `SQUAD_SECRET_KEY` in Vercel Project Environment Variables, set the Squad sandbox webhook URL to `https://loopin-ai.vercel.app/api/squad-webhook`, push the files, and test with Squad sandbox credentials. A real Squad transaction has not yet been tested.
+Squad subscription portal is built for sandbox testing: signup offers the 14-day trial or immediate Starter/Pro checkout; verified card, bank, USSD and transfer payments; card auto-renewal; billing status, cancellation, server plan checks and Starter's five-chat cap are included. The owner must: run `sql/8-billing.sql`, add `SQUAD_SECRET_KEY` in Vercel Project Environment Variables, set the Squad sandbox webhook URL to `https://loopin-ai.vercel.app/api/squad-webhook`, push the files, and test with Squad sandbox credentials. A real Squad transaction has not yet been tested.
 
 ### Still to build, in this order
 1. **Landing page update:** show the new features honestly (voice, personality in four tones with the same reminder example, Google tools). Keep every claim true.

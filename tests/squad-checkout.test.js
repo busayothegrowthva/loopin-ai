@@ -33,6 +33,7 @@ test('Pro checkout uses Squad sandbox, correct cents, and stores a pending attem
       assert.equal(body.amount, 3900);
       assert.equal(body.currency, 'USD');
       assert.equal(body.is_recurring, true);
+      assert.deepEqual(body.payment_channels, ['card', 'transfer', 'ussd', 'bank']);
       return new Response(JSON.stringify({ status: 200, data: { checkout_url: 'https://sandbox-pay.squadco.com/LOOPINTEST' } }), { status: 200 });
     }
     throw new Error('Unexpected request: ' + target);
@@ -58,10 +59,51 @@ test('Pro checkout uses Squad sandbox, correct cents, and stores a pending attem
   }
 });
 
+test('switching from a pending Starter checkout closes it and starts the selected Pro checkout', async () => {
+  process.env.SUPABASE_SECRET_KEY = 'test-supabase-secret';
+  process.env.SQUAD_SECRET_KEY = 'sandbox_sk_test';
+  const calls = [];
+  let pendingRead = 0;
+  global.fetch = async (url, options) => {
+    const target = String(url);
+    calls.push({ target, options });
+    if (target.endsWith('/auth/v1/user')) return new Response(JSON.stringify({ id: '11111111-1111-4111-8111-111111111111', email: 'founder@example.com' }), { status: 200 });
+    if (target.includes('/rest/v1/profiles?')) return new Response(JSON.stringify([{ id: '11111111-1111-4111-8111-111111111111', full_name: 'Loopin Founder' }]), { status: 200 });
+    if (target.includes('/rest/v1/squad_subscriptions?')) return new Response('[]', { status: 200 });
+    if (target.includes('/rest/v1/squad_payments?') && options.method === 'PATCH') return new Response('[]', { status: 200 });
+    if (target.includes('/rest/v1/squad_payments?') && options.method === 'GET') {
+      if (target.includes('select=plan,transaction_ref,checkout_url')) {
+        pendingRead++;
+        return new Response(JSON.stringify(pendingRead === 1 ? [{ plan: 'starter', transaction_ref: 'OLDREF', checkout_url: 'https://sandbox-pay.squadco.com/OLDREF' }] : []), { status: 200 });
+      }
+      return new Response('[]', { status: 200 });
+    }
+    if (target.endsWith('/rest/v1/squad_payments')) return new Response(JSON.stringify([{ ...JSON.parse(options.body), id: '22222222-2222-4222-8222-222222222222' }]), { status: 201 });
+    if (target === 'https://sandbox-api-d.squadco.com/transaction/initiate') return new Response(JSON.stringify({ status: 200, data: { checkout_url: 'https://sandbox-pay.squadco.com/NEWPRO' } }), { status: 200 });
+    throw new Error('Unexpected request: ' + target);
+  };
+
+  try {
+    delete require.cache[require.resolve('../api/squad')];
+    const handler = require('../api/squad');
+    const result = { statusCode: 0, body: null, status(code) { this.statusCode = code; return this; }, json(body) { this.body = body; return this; } };
+    await handler({ method: 'POST', query: { action: 'checkout' }, headers: { authorization: 'Bearer test-user-token' }, body: { plan: 'pro' } }, result);
+    assert.equal(result.statusCode, 200);
+    assert.equal(result.body.checkout_url, 'https://sandbox-pay.squadco.com/NEWPRO');
+    assert.ok(calls.some((call) => call.target.includes('transaction_ref=eq.OLDREF') && call.options.method === 'PATCH'));
+  } finally {
+    global.fetch = originalFetch;
+    if (originalSecret === undefined) delete process.env.SUPABASE_SECRET_KEY;
+    else process.env.SUPABASE_SECRET_KEY = originalSecret;
+    if (originalSquadKey === undefined) delete process.env.SQUAD_SECRET_KEY;
+    else process.env.SQUAD_SECRET_KEY = originalSquadKey;
+  }
+});
+
 test('confirmed payment activates the plan only after Squad verifies the transaction', async () => {
   process.env.SUPABASE_SECRET_KEY = 'test-supabase-secret';
   process.env.SQUAD_SECRET_KEY = 'sandbox_sk_test';
-  const reference = 'LOOPIN1760000000000ABCDEF123456';
+  const reference = 'LOOPIN21760000000000ABCDEF123456';
   const calls = [];
   global.fetch = async (url, options) => {
     const target = String(url);

@@ -8,7 +8,7 @@ module.exports = async function handler(req, res) {
   if (!user) return res.status(401).json({ error: 'not_logged_in' });
   const body = lib.readBody(req);
   const reference = typeof body.transaction_ref === 'string' ? body.transaction_ref.trim() : '';
-  if (!/^LOOPIN\d{13}[A-F0-9]{12}$/.test(reference)) return res.status(400).json({ error: 'bad_reference' });
+  if (!/^LOOPIN2\d{13}[A-F0-9]{12}$/.test(reference)) return res.status(400).json({ error: 'bad_reference' });
 
   try {
     const rows = await lib.db('squad_payments?transaction_ref=eq.' + encodeURIComponent(reference) + '&user_id=eq.' + user.id + '&select=user_id,email,transaction_ref,plan,amount,currency,status');

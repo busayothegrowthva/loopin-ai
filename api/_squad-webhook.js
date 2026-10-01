@@ -9,7 +9,7 @@ module.exports = async function handler(req, res) {
     const body = lib.readBody(req);
     if (String(body.Event || '').toLowerCase() !== 'charge_successful') return res.status(200).json({ received: true });
     const reference = String(body.TransactionRef || (body.Body && body.Body.transaction_ref) || '').trim();
-    if (!/^LOOPIN\d{13}[A-F0-9]{12}$/.test(reference)) return res.status(200).json({ received: true });
+    if (!/^LOOPIN2\d{13}[A-F0-9]{12}$/.test(reference)) return res.status(200).json({ received: true });
 
     const rows = await lib.db('squad_payments?transaction_ref=eq.' + encodeURIComponent(reference) + '&select=user_id,email,transaction_ref,plan,amount,currency,status');
     const payment = rows && rows[0];
