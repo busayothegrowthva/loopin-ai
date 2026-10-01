@@ -1,5 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
 
 const originalFetch = global.fetch;
 const originalSecret = process.env.SUPABASE_SECRET_KEY;
@@ -37,10 +39,10 @@ test('Pro checkout uses Squad sandbox, correct cents, and stores a pending attem
   };
 
   try {
-    delete require.cache[require.resolve('../api/squad-checkout')];
-    const handler = require('../api/squad-checkout');
+    delete require.cache[require.resolve('../api/squad')];
+    const handler = require('../api/squad');
     const result = { statusCode: 0, body: null, status(code) { this.statusCode = code; return this; }, json(body) { this.body = body; return this; } };
-    await handler({ method: 'POST', headers: { authorization: 'Bearer test-user-token' }, body: { plan: 'pro' } }, result);
+    await handler({ method: 'POST', query: { action: 'checkout' }, headers: { authorization: 'Bearer test-user-token' }, body: { plan: 'pro' } }, result);
     assert.equal(result.statusCode, 200, JSON.stringify({ body: result.body, requests: calls.map((call) => call.target) }));
     assert.equal(result.body.checkout_url, 'https://sandbox-pay.squadco.com/LOOPINTEST');
     const storedAttempt = calls.find((call) => call.target.endsWith('/rest/v1/squad_payments'));
@@ -78,10 +80,10 @@ test('confirmed payment activates the plan only after Squad verifies the transac
   };
 
   try {
-    delete require.cache[require.resolve('../api/squad-confirm')];
-    const handler = require('../api/squad-confirm');
+    delete require.cache[require.resolve('../api/squad')];
+    const handler = require('../api/squad');
     const result = { statusCode: 0, body: null, status(code) { this.statusCode = code; return this; }, json(body) { this.body = body; return this; } };
-    await handler({ method: 'POST', headers: { authorization: 'Bearer test-user-token' }, body: { transaction_ref: reference } }, result);
+    await handler({ method: 'POST', query: { action: 'confirm' }, headers: { authorization: 'Bearer test-user-token' }, body: { transaction_ref: reference } }, result);
     assert.equal(result.statusCode, 200);
     assert.equal(result.body.status, 'paid');
     const subscription = calls.find((call) => call.target.includes('/rest/v1/squad_subscriptions?on_conflict='));
@@ -95,5 +97,17 @@ test('confirmed payment activates the plan only after Squad verifies the transac
     else process.env.SUPABASE_SECRET_KEY = originalSecret;
     if (originalSquadKey === undefined) delete process.env.SQUAD_SECRET_KEY;
     else process.env.SQUAD_SECRET_KEY = originalSquadKey;
+  }
+});
+
+test('Vercel stays within Hobby function limit and preserves registered Squad URLs', () => {
+  const apiDir = path.join(__dirname, '..', 'api');
+  const publicFunctions = fs.readdirSync(apiDir).filter((file) => file.endsWith('.js') && !file.startsWith('_'));
+  assert.ok(publicFunctions.length <= 12, 'Expected at most 12 public functions, found ' + publicFunctions.length);
+
+  const config = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'vercel.json'), 'utf8'));
+  const rewrites = new Map(config.rewrites.map((route) => [route.source, route.destination]));
+  for (const action of ['cancel', 'checkout', 'confirm', 'renewals', 'status', 'webhook']) {
+    assert.equal(rewrites.get('/api/squad-' + action), '/api/squad?action=' + action);
   }
 });

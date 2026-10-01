@@ -84,7 +84,7 @@ Main folder:
 - `execute.js` carries out approved plans in Google (calendar, reminder as a calendar popup, email, task, doc, sheet row, invoice).
 - `voice.js` voice note audio to text.
 - `invoices.js` the "Send reminder" button. `followups.js` the daily cron (needs `CRON_SECRET`).
-- `squad-checkout.js`, `squad-confirm.js`, `squad-webhook.js`, `squad-renewals.js`, `squad-cancel.js`, `squad-status.js` handle Squad subscriptions. `_squad.js` and `_billing.js` are private payment and plan helpers.
+- `squad.js` dispatches Squad checkout, confirmation, webhook, renewal, cancellation and status requests. `_squad-*.js`, `_squad.js` and `_billing.js` are private payment and plan helpers.
 - `google-connect.js`, `google-disconnect.js` save and remove the Google connection.
 
 ## 6. Database (Supabase)

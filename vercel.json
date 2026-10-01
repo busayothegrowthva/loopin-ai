@@ -5,6 +5,14 @@
       "maxDuration": 30
     }
   },
+  "rewrites": [
+    { "source": "/api/squad-cancel", "destination": "/api/squad?action=cancel" },
+    { "source": "/api/squad-checkout", "destination": "/api/squad?action=checkout" },
+    { "source": "/api/squad-confirm", "destination": "/api/squad?action=confirm" },
+    { "source": "/api/squad-renewals", "destination": "/api/squad?action=renewals" },
+    { "source": "/api/squad-status", "destination": "/api/squad?action=status" },
+    { "source": "/api/squad-webhook", "destination": "/api/squad?action=webhook" }
+  ],
   "crons": [
     {
       "path": "/api/followups",

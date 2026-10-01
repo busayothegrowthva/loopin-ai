@@ -4,7 +4,7 @@
 
 **Goal:** Add Squad sandbox checkout for Starter and Pro, preserve the no-charge 14-day trial, allow immediate paid signup, record verified payments, and enforce plan access.
 
-**Architecture:** The browser asks authenticated Vercel functions to start checkout; the Squad secret key stays server-side. Squad redirects to a return page and sends webhooks; both paths verify the transaction directly with Squad before the server changes subscription access. Trial signup requires no payment. Immediate signup charges the selected month and requests card tokenization for subsequent recurring charges.
+**Architecture:** The browser asks authenticated Vercel functions to start checkout; the Squad secret key stays server-side. One public Squad function dispatches the existing checkout, return, webhook, cancellation, renewal and status paths using Vercel rewrites to stay within the Hobby function limit. Squad redirects to a return page and sends webhooks; both paths verify the transaction directly with Squad before the server changes subscription access. Trial signup requires no payment. Immediate signup charges the selected month and requests card tokenization for subsequent recurring charges.
 
 **Tech Stack:** Existing plain HTML/CSS/JavaScript, Vercel Node serverless functions, Supabase REST API, and Squad sandbox REST API. No added packages.
 
