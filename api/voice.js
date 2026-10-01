@@ -1,5 +1,6 @@
 // Voice Sync: turns a recorded voice note into text, using Groq's free Whisper speech model.
 const lib = require('./_lib');
+const billing = require('./_billing');
 
 const MODEL = 'whisper-large-v3-turbo';
 const MIMES = { 'audio/webm': 'webm', 'audio/ogg': 'ogg', 'audio/mp4': 'mp4', 'audio/mpeg': 'mp3', 'audio/wav': 'wav', 'audio/x-m4a': 'm4a' };
@@ -11,6 +12,10 @@ module.exports = async function handler(req, res) {
 
   const user = await lib.authUser(req);
   if (!user) return res.status(401).json({ error: 'not_logged_in' });
+  let entitlement;
+  try { entitlement = await billing.requireAccess(user.id); }
+  catch (e) { return res.status(502).json({ error: 'billing_check_failed' }); }
+  if (!entitlement.ok) return billing.deny(res, entitlement);
 
   const body = lib.readBody(req);
   const mime = String(body.mime || '').split(';')[0].trim().toLowerCase();

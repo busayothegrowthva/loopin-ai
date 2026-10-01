@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Payment status | Loopin AI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--ink:#12233A;--paper:#F5F7FB;--blue:#2C4BFF;--blue-dark:#1F37C9;--slate:#5B6B80;--line:#DCE2EC;--display:'Bricolage Grotesque','Segoe UI',system-ui,sans-serif;--body:'Instrument Sans','Segoe UI',system-ui,sans-serif}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font:17px/1.6 var(--body);color:var(--ink);background:var(--paper);min-height:100vh;display:flex;flex-direction:column;-webkit-font-smoothing:antialiased}
+.wrap{width:min(100% - 40px,620px);margin:auto}
+nav{border-bottom:1px solid var(--line);background:#fff}
+.nav{height:68px;display:flex;align-items:center;font:800 23px var(--display)}
+.mark{display:inline-block;width:26px;height:26px;margin-right:8px;border:5px solid var(--blue);border-right-color:#FFC94A;border-radius:50%;transform:rotate(-30deg)}
+main{flex:1;display:grid;place-items:center;padding:48px 0}
+.panel{padding:32px;background:#fff;border:1.5px solid var(--line);border-radius:18px}
+h1{font:800 32px/1.1 var(--display);margin-bottom:10px}
+p{color:var(--slate)}
+.actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:24px}
+a,button{font:600 16px var(--body);border-radius:9px;padding:11px 16px;text-decoration:none;cursor:pointer}
+a{background:var(--blue);color:#fff}
+button{border:1.5px solid var(--line);background:#fff;color:var(--ink)}
+button:disabled{opacity:.55;cursor:wait}
+:focus-visible{outline:3px solid var(--blue);outline-offset:3px}
+</style>
+</head>
+<body>
+<nav><div class="wrap nav"><span class="mark" aria-hidden="true"></span>Loopin AI</div></nav>
+<main><section class="wrap panel" aria-live="polite">
+<h1 id="title">Checking your payment</h1>
+<p id="message">Please wait while Loopin confirms the payment with Squad.</p>
+<div class="actions" id="actions"></div>
+</section></main>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script>
+(function(){
+  var title=document.getElementById('title'),message=document.getElementById('message'),actions=document.getElementById('actions');
+  var reference=new URLSearchParams(location.search).get('ref')||'';
+  function link(label,href){var a=document.createElement('a');a.textContent=label;a.href=href;actions.appendChild(a);}
+  function check(){
+    actions.textContent='';title.textContent='Checking your payment';message.textContent='Please wait while Loopin confirms the payment with Squad.';
+    sb.auth.getSession().then(function(sessionResult){
+      var session=sessionResult.data&&sessionResult.data.session;
+      if(!session){title.textContent='Please log in';message.textContent='Log in to Loopin, then return to your dashboard to check your plan.';link('Log in','login.html');return;}
+      return fetch('/api/squad-confirm',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+session.access_token},body:JSON.stringify({transaction_ref:reference})});
+    }).then(function(response){
+      if(!response)return;
+      return response.json().catch(function(){return {};}).then(function(data){
+        if(response.ok&&data.status==='paid'){
+          title.textContent='Payment confirmed';message.textContent='Your '+(data.plan==='pro'?'Pro':'Starter')+' plan is active.';link('Go to dashboard','dashboard.html');return;
+        }
+        title.textContent='Payment not confirmed yet';message.textContent=response.status===409?'If you completed the payment, wait a moment and check again. No plan was changed.':'We could not confirm this payment. You can safely return to your dashboard.';
+        var retry=document.createElement('button');retry.type='button';retry.textContent='Check again';retry.onclick=function(){retry.disabled=true;check();};actions.appendChild(retry);link('Go to dashboard','dashboard.html');
+      });
+    }).catch(function(){title.textContent='Could not check payment';message.textContent='Check your internet and try again. Your plan will not change until Squad confirms payment.';var retry=document.createElement('button');retry.type='button';retry.textContent='Check again';retry.onclick=check;actions.appendChild(retry);});
+  }
+  if(!reference){title.textContent='Payment reference missing';message.textContent='Return to your dashboard to view your plan or start checkout again.';link('Go to dashboard','dashboard.html');return;}
+  check();
+})();
+</script>
+</body>
+</html>

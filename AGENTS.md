@@ -16,7 +16,7 @@ Read this whole file before doing anything. It replaces a long conversation. Do 
 Module assignment: "Build an App People Will Pay For". Required:
 1. A landing page that sells the product and leads to the app.
 2. A working app: sign up, login, dashboard, database, core features.
-3. A clear business model and a payment flow (Stripe test or sandbox mode is acceptable): Landing page, Sign up, Payment, Product.
+3. A clear business model and a payment flow (Squad test or sandbox mode): Landing page, Sign up, Payment, Product.
 4. Polish: good UI, mobile friendly, loading, empty and error states, form validation, permissions, safe handling of secrets.
 5. Deployed on a live URL.
 6. A GitHub repository.
@@ -48,7 +48,7 @@ Plus the assistant commands: schedule meetings, draft and send email, reminders,
 ### Pricing (shown on the landing page)
 - Starter $19 per month: assistant, Gmail/Calendar/Tasks/Docs/Sheets, reminders, Voice Sync, Commitment Sync on up to 5 chats.
 - Pro $39 per month: everything in Starter, all five features on unlimited chats, Revenue Sync, Consistency Watch, Accuracy Watch.
-- 14-day free trial on both. Cancel before the trial ends and pay nothing.
+- 14-day free trial on both, no card needed. Trials do not auto-charge; users choose when to subscribe. Direct subscription charges immediately and renews monthly until canceled.
 
 ## 4. Technology (and why)
 
@@ -58,7 +58,7 @@ Plus the assistant commands: schedule meetings, draft and send email, reminders,
 - **Database and logins:** Supabase (project ref `fdtsivknoiholycsgkjt`, URL `https://fdtsivknoiholycsgkjt.supabase.co`). Email and password auth, "Confirm email" turned OFF for the demo. Browser code uses the publishable key. Server code uses the secret key.
 - **AI brain:** Groq, model `openai/gpt-oss-120b` (can be changed with env var `GROQ_MODEL`). Voice: Groq `whisper-large-v3-turbo`. Groq was chosen because it has a free tier. `llama-3.3-70b-versatile` is being retired for free accounts, so do not use it.
 - **Google:** OAuth web client in a Google Cloud project called "Loopin AI". The app is in **Testing mode**: only listed test users can connect, a connection expires after about 7 days, and users see an "unverified app" warning (Advanced, then Go to Loopin AI). The owner uses a separate demo Google account for the demo.
-- **Payments (not built yet):** Stripe in test mode.
+- **Payments (not built yet):** Squad Payments, a subsidiary of Guaranty Trust Holding Company (GTCO). Use its test or sandbox mode for the assignment.
 
 ### Google permissions requested (ask for the fewest possible)
 `openid email profile`, `gmail.send`, `gmail.readonly`, `calendar.events`, `tasks`, `documents`, `spreadsheets`, `drive.file` (only files Loopin creates). Meet and Forms APIs are enabled but unused on purpose. `gmail.readonly` is a Google "restricted" scope: fine in testing, but a security review is needed before going public.
@@ -84,6 +84,7 @@ Main folder:
 - `execute.js` carries out approved plans in Google (calendar, reminder as a calendar popup, email, task, doc, sheet row, invoice).
 - `voice.js` voice note audio to text.
 - `invoices.js` the "Send reminder" button. `followups.js` the daily cron (needs `CRON_SECRET`).
+- `squad-checkout.js`, `squad-confirm.js`, `squad-webhook.js`, `squad-renewals.js`, `squad-cancel.js`, `squad-status.js` handle Squad subscriptions. `_squad.js` and `_billing.js` are private payment and plan helpers.
 - `google-connect.js`, `google-disconnect.js` save and remove the Google connection.
 
 ## 6. Database (Supabase)
@@ -95,6 +96,7 @@ Run files in `sql/` in numeric order. Tables:
 - `google_connections` (refresh token; the browser can only see email and scopes, never the token)
 - `client_chats` (name and four permission switches, all default false), `chat_messages` (saved text of allowed chats; only the server inserts)
 - `invoices` (number, client, amount, currency, status sent, reminded or paid)
+- `squad_subscriptions` and `squad_payments` (private server-only plan, renewal and verified payment records; set up with `sql/8-billing.sql`)
 
 **Rules learned the hard way:** Supabase is set so new tables are NOT exposed automatically. Every new table needs row level security on, explicit `grant` statements for `authenticated` and also for `service_role`, and policies. Use column-level grants where users must not edit every column (for example users cannot change their own `plan` or `trial_ends_at`).
 
@@ -106,7 +108,8 @@ Set in Vercel, project **Settings, Environment Variables, Project tab** (NOT the
 - `SUPABASE_SECRET_KEY`
 - `CRON_SECRET`
 - `GROQ_MODEL` (optional)
-- Needed later: Stripe secret key and webhook secret.
+- `SQUAD_SECRET_KEY` (Squad sandbox secret key; it starts with `sandbox_sk_`)
+- After KYC is approved, replace the sandbox key with the live Squad key before going live.
 
 ## 8. Security decisions already made (keep them)
 
@@ -125,19 +128,19 @@ Landing page (live), contact form, sign up, login, dashboard, assistant chat wit
 ### Built and mock-tested, awaiting the owner's live test
 Consistency Watch: `api/consistency.js` plus a "Check repeated promises" button on client chats that have the switch on. No new database setup or keys needed. It reads the saved text of that one chat, finds promises the founder made 2 or more times that still look unfinished, and offers a task for each (approved with Yes / Edit / No like everything else).
 Accuracy Watch (Business facts box saved in the founder's profile, per-chat accuracy switch, paste-in mismatch check against real prices and policies). The owner must: run `sql/7-accuracy.sql`, upload the files, then test the feature on the live app.
+Squad subscription portal is built for sandbox testing: signup offers the 14-day trial or immediate Starter/Pro checkout; verified payment handling, billing status, cancellation, server plan checks, Starter's five-chat cap, and a daily renewal job are included. The owner must: run `sql/8-billing.sql`, add `SQUAD_SECRET_KEY` in Vercel Project Environment Variables, set the Squad sandbox webhook URL to `https://loopin-ai.vercel.app/api/squad-webhook`, push the files, and test with Squad sandbox credentials. A real Squad transaction has not yet been tested.
 
 ### Still to build, in this order
-1. **Stripe subscriptions in test mode:** checkout for Starter and Pro with the 14-day trial, a webhook that records the subscription, plan gating (Starter limits such as 5 chats and Pro-only features), a billing section on the dashboard. The signup page currently collects a plan but takes no payment.
-2. **Landing page update:** show the new features honestly (voice, personality in four tones with the same reminder example, Google tools). Keep every claim true.
-3. **Polish:** test on a phone, empty and error states, forgot password, loading states, accessibility checks.
-4. **Demo video preparation:** a demo Google account with believable emails and calendar events.
+1. **Landing page update:** show the new features honestly (voice, personality in four tones with the same reminder example, Google tools). Keep every claim true.
+2. **Polish:** test on a phone, empty and error states, forgot password, loading states, accessibility checks.
+3. **Demo video preparation:** a demo Google account with believable emails and calendar events.
 
 ### WhatsApp (blocked, but it is the heart of the product)
 The owner wants Loopin to be a real WhatsApp contact. The Meta developer app is blocked: the new business portfolio is "restricted from advertising", and review needs an ID the owner could not find. Until unlocked, the dashboard chat is the working assistant. Decision day was set for 3 October: if still blocked, use a WhatsApp demo alternative that does not need Meta's approval, or demo from the dashboard.
 Design when unlocked: a webhook function (`api/whatsapp.js`) receives messages, links a phone number to a user account, replies with interactive Yes / Edit / No buttons, reuses `chat.js` logic and `voice.js` for voice notes. Meta's free test number can message up to 5 verified numbers and a free-form reply is allowed only within 24 hours of the user's last message. Real limit: WhatsApp does not let any app read a person's personal chats, so client chats reach Loopin by forwarding or pasting (today: paste into the dashboard).
 
 ### Later (not needed for the assignment)
-Real Loopin number and Meta business name approval and verification; message templates for reminders Loopin starts by itself; paid AI plan and a data policy check; legal review of privacy and terms; Google verification and the security review for restricted scopes; encrypt stored Google tokens; turn email confirmation back on; switch Stripe to live mode; custom domain; real testimonials; email alerts for contact form messages; auto-create payment links inside each founder's own Stripe or Paystack; more personality options.
+Real Loopin number and Meta business name approval and verification; message templates for reminders Loopin starts by itself; paid AI plan and a data policy check; legal review of privacy and terms; Google verification and the security review for restricted scopes; encrypt stored Google tokens; turn email confirmation back on; switch Squad to live mode; custom domain; real testimonials; email alerts for contact form messages; auto-create payment links inside each founder's own Stripe or Paystack; more personality options.
 
 ## 10. Working agreements for you
 

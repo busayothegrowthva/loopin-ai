@@ -169,6 +169,9 @@ footer{padding:36px 0;background:#0C1A2C;color:#8FA1B9;font-size:15px}
 .invbtns{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
 .invbtns button{font:600 13px var(--body);padding:6px 12px;border-radius:999px;border:1.5px solid var(--line);background:#fff;color:var(--ink);cursor:pointer}
 .invbtns button:disabled{opacity:.5;cursor:default}
+.billing-controls{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:14px}
+.billing-controls select{font:16px var(--body);padding:11px 14px;border:1.5px solid var(--line);border-radius:10px;background:var(--paper);color:var(--ink)}
+.billing-controls .btn{width:auto;padding:11px 22px}
 @media(max-width:700px){.dgrid{grid-template-columns:1fr}.b{max-width:95%}}
 </style>
 <div class="wrap dash">
@@ -178,6 +181,21 @@ footer{padding:36px 0;background:#0C1A2C;color:#8FA1B9;font-size:15px}
     <div class="trial" id="trial"></div>
 
     <div class="gbar" id="gbar"></div>
+
+    <div class="sec">
+      <h2>Plan and billing</h2>
+      <div class="tonebox" id="billingBox">
+        <p class="muted" id="billingInfo" aria-live="polite">Checking your plan...</p>
+        <div class="billing-controls">
+          <label for="billingPlan" class="muted">Choose a plan</label>
+          <select id="billingPlan"><option value="starter">Starter, $19/month</option><option value="pro">Pro, $39/month</option></select>
+          <button class="btn btn-primary" id="billingSubscribe" type="button">Subscribe now</button>
+          <button class="btn" id="billingCancel" type="button" style="display:none">Cancel subscription</button>
+        </div>
+        <p class="muted" style="font-size:13px;margin-top:8px">Subscribing now charges the selected monthly price through Squad and renews monthly until canceled. Your free trial remains free unless you choose to subscribe.</p>
+        <div class="tstatus" id="billingStatus" aria-live="polite"></div>
+      </div>
+    </div>
 
     <div class="chat">
       <div class="chat-log" id="chatlog" aria-live="polite"></div>
@@ -543,6 +561,52 @@ footer{padding:36px 0;background:#0C1A2C;color:#8FA1B9;font-size:15px}
     };
   }
 
+  function loadBilling(){
+    var info=document.getElementById('billingInfo'),plan=document.getElementById('billingPlan'),btn=document.getElementById('billingSubscribe'),cancel=document.getElementById('billingCancel'),st=document.getElementById('billingStatus');
+    plan.disabled=false;btn.disabled=false;btn.textContent='Subscribe now';cancel.style.display='none';
+    post('/api/squad-status',{}).then(function(o){
+      if(o.status===401){location.href='login.html';return;}
+      if(o.status!==200){info.textContent='Could not load billing details. Refresh the page.';return;}
+      var d=o.data;plan.value=d.plan==='pro'?'pro':'starter';
+      billingPlan=d.plan==='pro'?'pro':'starter';billingActive=!!d.active;
+      var badge=document.getElementById('trial');
+      if(d.status==='active'){
+        badge.textContent=(d.plan==='pro'?'Pro':'Starter')+' plan active.';
+        info.textContent=(d.plan==='pro'?'Pro':'Starter')+' plan is active. Next payment: '+(d.next_billing_at?new Date(d.next_billing_at).toLocaleDateString():'not scheduled yet')+'.';
+        plan.disabled=true;btn.disabled=true;btn.textContent='Subscription active';cancel.style.display='inline-block';
+      }else if(d.status==='trialing'){
+        var days=Math.max(0,Math.ceil((new Date(d.trial_ends_at)-new Date())/86400000));
+        badge.textContent=(d.plan==='pro'?'Pro':'Starter')+' plan. Free trial: '+days+' day'+(days===1?'':'s')+' left';
+        info.textContent=(d.plan==='pro'?'Pro':'Starter')+' free trial: '+days+' day'+(days===1?'':'s')+' left. No payment is due during the trial.';
+      }else if(d.status==='canceled'){
+        badge.textContent=(d.plan==='pro'?'Pro':'Starter')+' subscription canceled.';
+        info.textContent='Your subscription is canceled. You will not be charged again.'+(d.active&&d.next_billing_at?' Access continues through '+new Date(d.next_billing_at).toLocaleDateString()+'.':' Choose a plan if you want to subscribe again.');
+        if(d.active){plan.disabled=true;btn.disabled=true;btn.textContent='Paid through '+new Date(d.next_billing_at).toLocaleDateString();}
+      }else{
+        badge.textContent=(d.plan==='pro'?'Pro':'Starter')+' free trial has ended';
+        info.textContent='Your free trial has ended. Choose a plan and subscribe to continue using Loopin.';
+      }
+      renderChats();
+    }).catch(function(){info.textContent='Could not load billing details. Check your internet and refresh.';});
+    btn.onclick=function(){
+      btn.disabled=true;btn.textContent='Opening Squad...';st.style.color='var(--slate)';st.textContent='';
+      post('/api/squad-checkout',{plan:plan.value}).then(function(o){
+        if(o.status===401){location.href='login.html';return;}
+        if(o.status!==200||!o.data.checkout_url){st.style.color='#B3261E';st.textContent=o.data&&o.data.error==='squad_not_configured'?'Payments are not configured yet.':'Could not start checkout. Please try again.';return;}
+        location.href=o.data.checkout_url;
+      }).catch(function(){st.style.color='#B3261E';st.textContent='Could not connect to checkout. Please try again.';}).then(function(){btn.disabled=false;btn.textContent='Subscribe now';});
+    };
+    cancel.onclick=function(){
+      if(!confirm('Cancel your Squad subscription? Future monthly charges will stop.'))return;
+      cancel.disabled=true;st.style.color='var(--slate)';st.textContent='Canceling...';
+      post('/api/squad-cancel',{}).then(function(o){
+        if(o.status===401){location.href='login.html';return;}
+        if(o.status!==200){st.style.color='#B3261E';st.textContent='Could not cancel right now. Please try again or contact support.';return;}
+        st.style.color='var(--mint-deep)';st.textContent='Subscription canceled.';loadBilling();
+      }).catch(function(){st.style.color='#B3261E';st.textContent='Could not connect. Please try again.';}).then(function(){cancel.disabled=false;});
+    };
+  }
+
   /* ---------- Invoices and payment link ---------- */
   function fmtMoney(a,c){try{return new Intl.NumberFormat('en',{style:'currency',currency:c}).format(a);}catch(e){return a+' '+c;}}
   function loadInvoices(){
@@ -597,12 +661,12 @@ footer{padding:36px 0;background:#0C1A2C;color:#8FA1B9;font-size:15px}
   }
 
   /* ---------- Client chats and permission switches ---------- */
-  var chats=[];
+  var chats=[],billingPlan='starter',billingActive=false;
   var TOGGLES=[
-    ['commitment_sync','Commitment Sync','Turn agreements into tasks and events',true],
-    ['revenue_sync','Revenue Sync','Invoices from agreed prices',true],
-    ['consistency_watch','Consistency Watch','Track repeated promises',true],
-    ['accuracy_watch','Accuracy Watch','Check answers against your facts',true]
+    ['commitment_sync','Commitment Sync','Turn agreements into tasks and events',true,false],
+    ['revenue_sync','Revenue Sync','Invoices from agreed prices',true,true],
+    ['consistency_watch','Consistency Watch','Track repeated promises',true,true],
+    ['accuracy_watch','Accuracy Watch','Check answers against your facts',true,true]
   ];
   function loadChats(){
     sb.from('client_chats').select('id,name,commitment_sync,revenue_sync,consistency_watch,accuracy_watch').order('created_at',{ascending:false}).then(function(r){
@@ -634,8 +698,10 @@ footer{padding:36px 0;background:#0C1A2C;color:#8FA1B9;font-size:15px}
         var row=el('label','trow'),left=el('span','');
         left.appendChild(document.createTextNode(t[1]));
         if(!t[3])left.appendChild(el('span','soon','Soon'));
+        else if(!billingActive)left.appendChild(el('span','soon','Plan needed'));
+        else if(t[4]&&billingPlan!=='pro')left.appendChild(el('span','soon','Pro'));
         left.appendChild(el('small','',t[2]));
-        var sw=el('span','switch'),inp=document.createElement('input');inp.type='checkbox';inp.checked=!!c[t[0]];inp.disabled=!t[3];
+        var sw=el('span','switch'),inp=document.createElement('input');inp.type='checkbox';inp.checked=!!c[t[0]];inp.disabled=!t[3]||!billingActive||(t[4]&&billingPlan!=='pro');
         inp.onchange=function(){
           var want=inp.checked,patch={};patch[t[0]]=want;inp.disabled=true;
           sb.from('client_chats').update(patch).eq('id',c.id).then(function(r){
@@ -765,7 +831,7 @@ footer{padding:36px 0;background:#0C1A2C;color:#8FA1B9;font-size:15px}
     if(!session){location.href='login.html';return;}
     return sb.from('profiles').select('full_name,plan,trial_ends_at').eq('id',session.user.id).single().then(function(p){
       if(p.error||!p.data){state.textContent='We could not load your account. Refresh the page, or log out and log in again.';return;}
-      var d=p.data;fullName=d.full_name||'';firstName=(fullName||'there').split(' ')[0];
+      var d=p.data;fullName=d.full_name||'';firstName=(fullName||'there').split(' ')[0];billingPlan=d.plan==='pro'?'pro':'starter';billingActive=Date.parse(d.trial_ends_at)>Date.now();
       document.getElementById('hello').textContent='Welcome, '+firstName+'.';
       var days=Math.max(0,Math.ceil((new Date(d.trial_ends_at)-new Date())/86400000));
       document.getElementById('trial').textContent=(d.plan==='pro'?'Pro':'Starter')+' plan. '+(days>0?('Free trial: '+days+' day'+(days===1?'':'s')+' left'):'Your free trial has ended');
@@ -784,6 +850,7 @@ footer{padding:36px 0;background:#0C1A2C;color:#8FA1B9;font-size:15px}
         loadTone(session.user.id);
         loadBusinessFacts(session.user.id);
         loadPayLink(session.user.id);
+        loadBilling();
       });
     });
   }).catch(function(){state.textContent='Could not connect. Check your internet and refresh the page.';});

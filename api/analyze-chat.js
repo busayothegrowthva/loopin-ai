@@ -1,6 +1,7 @@
 // Commitment Sync: reads a client chat the founder has switched on, and finds what was agreed.
 // Refuses to read any chat whose switch is off. This check happens here on the server.
 const lib = require('./_lib');
+const billing = require('./_billing');
 
 const MODEL = process.env.GROQ_MODEL || 'openai/gpt-oss-120b';
 const TYPES = ['calendar_event', 'task', 'reminder', 'invoice'];
@@ -96,6 +97,10 @@ module.exports = async function handler(req, res) {
 
   const user = await lib.authUser(req);
   if (!user) return res.status(401).json({ error: 'not_logged_in' });
+  let entitlement;
+  try { entitlement = await billing.requireAccess(user.id); }
+  catch (e) { return res.status(502).json({ error: 'billing_check_failed' }); }
+  if (!entitlement.ok) return billing.deny(res, entitlement);
 
   const body = lib.readBody(req);
   const chatId = String(body.chat_id || '');
@@ -114,7 +119,7 @@ module.exports = async function handler(req, res) {
   // Each switch controls its own kind of plan. Dates and tasks need Commitment Sync. Invoices need Revenue Sync.
   const allow = [];
   if (chat.commitment_sync === true) allow.push('calendar_event', 'task', 'reminder');
-  if (chat.revenue_sync === true) allow.push('invoice');
+  if (chat.revenue_sync === true && entitlement.access.plan === 'pro') allow.push('invoice');
   if (!allow.length) return res.status(403).json({ error: 'not_allowed' });
 
   const now = nowText(clean(body.timezone, 60) || 'UTC');

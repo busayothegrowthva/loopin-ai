@@ -2,6 +2,7 @@
 // made more than once that still look unfinished. Refuses if the chat's switch is off.
 const lib = require('./_lib');
 const ai = require('./_ai');
+const billing = require('./_billing');
 
 function buildPrompt(now, founder, clientName, doneList) {
   return `You are Loopin's Consistency Watch. You read the saved conversations between a founder and one client, and spot promises the founder made MORE THAN ONCE that still look unfinished.
@@ -61,6 +62,10 @@ module.exports = async function handler(req, res) {
 
   const user = await lib.authUser(req);
   if (!user) return res.status(401).json({ error: 'not_logged_in' });
+  let entitlement;
+  try { entitlement = await billing.requireAccess(user.id, 'pro'); }
+  catch (e) { return res.status(502).json({ error: 'billing_check_failed' }); }
+  if (!entitlement.ok) return billing.deny(res, entitlement);
 
   const body = lib.readBody(req);
   const chatId = String(body.chat_id || '');

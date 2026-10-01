@@ -2,6 +2,7 @@
 const crypto = require('crypto');
 const lib = require('./_lib');
 const invoices = require('./_invoice');
+const billing = require('./_billing');
 
 const EMAIL_RE = /[^\s,;<>"']+@[^\s,;<>"']+\.[^\s,;<>"']+/g;
 
@@ -162,10 +163,22 @@ module.exports = async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'method_not_allowed' });
   const user = await lib.authUser(req);
   if (!user) return res.status(401).json({ error: 'not_logged_in' });
+  let entitlement;
+  try { entitlement = await billing.requireAccess(user.id); }
+  catch (e) { return res.status(502).json({ error: 'billing_check_failed' }); }
+  if (!entitlement.ok) return billing.deny(res, entitlement);
 
   const body = lib.readBody(req);
   const ids = (Array.isArray(body.activity_ids) ? body.activity_ids : []).filter((x) => lib.UUID.test(String(x))).slice(0, 6);
   if (!ids.length) return res.status(400).json({ error: 'bad_request' });
+  if (entitlement.access.plan !== 'pro') {
+    try {
+      const requested = await lib.db('activity?id=in.(' + ids.join(',') + ')&user_id=eq.' + user.id + '&status=eq.approved&result=is.null&select=type');
+      if ((requested || []).some((row) => row.type === 'invoice')) {
+        return res.status(403).json({ error: 'pro_required' });
+      }
+    } catch (e) { return res.status(502).json({ error: 'db_error' }); }
+  }
   let tz = str(body.timezone, 60) || 'UTC';
   try { new Intl.DateTimeFormat('en-GB', { timeZone: tz }); } catch (e) { tz = 'UTC'; }
 

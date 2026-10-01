@@ -1,6 +1,7 @@
 // Accuracy Watch: compares a pasted customer-facing answer against the founder's saved business facts.
 // It refuses to check if the founder has not switched this on for that chat.
 const lib = require('./_lib');
+const billing = require('./_billing');
 
 const MODEL = process.env.GROQ_MODEL || 'openai/gpt-oss-120b';
 
@@ -53,6 +54,10 @@ module.exports = async function handler(req, res) {
 
   const user = await lib.authUser(req);
   if (!user) return res.status(401).json({ error: 'not_logged_in' });
+  let entitlement;
+  try { entitlement = await billing.requireAccess(user.id, 'pro'); }
+  catch (e) { return res.status(502).json({ error: 'billing_check_failed' }); }
+  if (!entitlement.ok) return billing.deny(res, entitlement);
 
   const body = lib.readBody(req);
   const chatId = String(body.chat_id || '');

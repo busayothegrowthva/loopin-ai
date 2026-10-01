@@ -1,6 +1,7 @@
 // Loopin AI: the assistant's brain.
 // Runs on Vercel's servers. The Groq key lives in Vercel's hidden settings and never reaches the browser.
 const lib = require('./_lib');
+const billing = require('./_billing');
 
 const MODEL = process.env.GROQ_MODEL || 'openai/gpt-oss-120b';
 const TYPES = ['calendar_event', 'email', 'task', 'reminder', 'invoice', 'doc', 'sheet_row'];
@@ -32,7 +33,7 @@ function nowText(tz) {
   }
 }
 
-function buildPrompt(now, name, googleConnected, tones) {
+function buildPrompt(now, name, googleConnected, tones, plan) {
   tones = tones || {};
   return `You are Loopin, an AI executive assistant for a busy founder${name ? ' named ' + name : ''}. The founder messages you from their phone.
 
@@ -43,6 +44,7 @@ Right now it is ${now.long} (${now.tz}). Today's date is ${now.iso}. The founder
 Tone for your replies to the founder: ${TONES[tones.assistant] || TONES.professional}
 Tone for emails you write to other people: ${TONES[tones.email] || TONES.professional}
 Tone only changes wording. It never changes facts, dates, amounts, or the rule that the founder approves every plan.
+The founder's plan is ${plan}. Invoice actions are available only on the Pro plan; if the plan is Starter, never propose an invoice action.
 
 Messages that begin with (Voice note) were transcribed from speech and may contain small mistakes. If a voice note is a reminder or instruction the founder is giving themselves, such as "remind me to call the supplier tomorrow", turn it into a reminder or task.
 
@@ -201,6 +203,10 @@ module.exports = async function handler(req, res) {
 
   const user = await lib.authUser(req);
   if (!user) return res.status(401).json({ error: 'not_logged_in' });
+  let entitlement;
+  try { entitlement = await billing.requireAccess(user.id); }
+  catch (e) { return res.status(502).json({ error: 'billing_check_failed' }); }
+  if (!entitlement.ok) return billing.deny(res, entitlement);
 
   const body = lib.readBody(req);
   const history = (Array.isArray(body.messages) ? body.messages : [])
@@ -226,7 +232,7 @@ module.exports = async function handler(req, res) {
     if (p && p[0]) tones = { assistant: p[0].assistant_tone, email: p[0].email_tone };
   } catch (e) { /* defaults to professional */ }
 
-  const messages = [{ role: 'system', content: buildPrompt(now, name, connected, tones) }].concat(history);
+  const messages = [{ role: 'system', content: buildPrompt(now, name, connected, tones, entitlement.access.plan) }].concat(history);
 
   try {
     const parsed = await askParsed(key, messages);

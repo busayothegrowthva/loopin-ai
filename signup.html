@@ -45,6 +45,9 @@ footer{padding:36px 0;background:#0C1A2C;color:#8FA1B9;font-size:15px}
 .switch-line{margin-top:20px;text-align:center;font-size:15px;color:var(--slate)}
 .switch-line a{color:var(--blue);font-weight:600}
 .notice{display:none;margin-top:18px;background:#FFF4D6;border-radius:12px;padding:14px 16px;font-size:15px}
+.billing-choice{display:flex;gap:10px;align-items:flex-start;padding:12px 14px;border:1.5px solid var(--line);border-radius:10px;background:#fff;margin-top:8px;cursor:pointer}
+.billing-choice input{margin-top:5px;accent-color:var(--blue)}
+.billing-choice span{display:block}.billing-choice b{display:block;font-size:15px}.billing-choice small{display:block;color:var(--slate);font-size:13px;line-height:1.4}
 /* legal text */
 .legal{max-width:760px;padding:56px 0 72px}
 .legal h1{font-size:clamp(34px,5vw,48px);font-weight:800;margin-bottom:8px}
@@ -64,12 +67,16 @@ footer{padding:36px 0;background:#0C1A2C;color:#8FA1B9;font-size:15px}
 <main>
 <div class="wrap"><div class="card">
 <h1>Start your 14-day free trial</h1>
-<p class="lead">Set up in about five minutes. Cancel before the trial ends and you pay nothing.</p>
+<p class="lead">14 days free, no card needed. Subscribe when you are ready; your trial will not auto-charge.</p>
 <form id="authForm" novalidate>
 <div class="field"><label for="name">Your name</label><input id="name" type="text" autocomplete="name"><div class="err">Enter your name.</div></div>
 <div class="field"><label for="email">Email</label><input id="email" type="email" autocomplete="email"><div class="err">Enter a valid email address.</div></div>
 <div class="field"><label for="password">Password</label><input id="password" type="password" autocomplete="new-password"><div class="hint">At least 8 characters.</div><div class="err">Password must be at least 8 characters.</div></div>
 <div class="field"><label for="plan">Plan</label><select id="plan"><option value="starter">Starter, $19 a month</option><option value="pro">Pro, $39 a month</option></select></div>
+<div class="field"><span style="display:block;font-weight:600;font-size:15px">How would you like to start?</span>
+  <label class="billing-choice"><input type="radio" name="billingPath" value="trial" checked><span><b>Start 14-day free trial</b><small>No card or payment today. Your trial will not auto-charge; choose a plan and subscribe when ready.</small></span></label>
+  <label class="billing-choice"><input type="radio" name="billingPath" value="subscribe"><span><b>Subscribe now</b><small>Pay the selected monthly price now through Squad. It renews monthly until you cancel.</small></span></label>
+</div>
 <button class="btn btn-primary" type="submit">Create account</button>
 </form>
 <div class="notice" id="notice" role="status"></div>
@@ -98,14 +105,15 @@ footer{padding:36px 0;background:#0C1A2C;color:#8FA1B9;font-size:15px}
     ok=check('email',emailOk)&&ok;
     ok=check('password',function(v){return v.length>=8})&&ok;
     if(!ok)return;
+    var billingPath=document.querySelector('input[name="billingPath"]:checked').value;
     btn.disabled=true;btn.textContent='Creating your account...';
     sb.auth.signUp({
       email:document.getElementById('email').value.trim(),
       password:document.getElementById('password').value,
       options:{data:{full_name:document.getElementById('name').value.trim(),plan:document.getElementById('plan').value}}
     }).then(function(r){
-      btn.disabled=false;btn.textContent='Create account';
       if(r.error){
+        btn.disabled=false;btn.textContent='Create account';
         var m=r.error.message||'';
         if(/already registered/i.test(m))show('That email already has an account. Please log in instead.');
         else if(/password/i.test(m))show('Please choose a stronger password with at least 8 characters.');
@@ -113,8 +121,21 @@ footer{padding:36px 0;background:#0C1A2C;color:#8FA1B9;font-size:15px}
         else show('Something went wrong. Please try again in a moment.');
         return;
       }
-      if(r.data.user&&r.data.user.identities&&r.data.user.identities.length===0){show('That email already has an account. Please log in instead.');return;}
+      if(r.data.user&&r.data.user.identities&&r.data.user.identities.length===0){btn.disabled=false;btn.textContent='Create account';show('That email already has an account. Please log in instead.');return;}
+      if(r.data.session&&billingPath==='subscribe'){
+        btn.textContent='Opening Squad checkout...';
+        fetch('/api/squad-checkout',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+r.data.session.access_token},body:JSON.stringify({plan:document.getElementById('plan').value})})
+          .then(function(response){return response.json().catch(function(){return {};}).then(function(data){return {ok:response.ok,data:data};});})
+          .then(function(result){
+            if(result.ok&&result.data.checkout_url){location.href=result.data.checkout_url;return;}
+            btn.disabled=false;btn.textContent='Create account';
+            show('Your account is ready, but checkout could not start. Please log in and try subscribing from your dashboard.');
+          }).catch(function(){btn.disabled=false;btn.textContent='Create account';show('Your account is ready, but checkout could not start. Please log in and try subscribing from your dashboard.');});
+        return;
+      }
+      btn.disabled=false;btn.textContent='Create account';
       if(r.data.session){location.href='dashboard.html';}
+      else if(billingPath==='subscribe'){show('Your account was created. Confirm your email, log in, and choose Subscribe now from your dashboard.');}
       else{show('Almost done. Check your email and click the link to confirm your account, then log in.');}
     }).catch(function(){btn.disabled=false;btn.textContent='Create account';show('Could not connect. Check your internet and try again.');});
   });
