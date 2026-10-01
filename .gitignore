@@ -1,0 +1,5 @@
+.env
+.env.local
+loopin_ai_old_chat/
+node_modules/
+.vercel
