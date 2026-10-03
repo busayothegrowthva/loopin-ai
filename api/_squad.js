@@ -2,7 +2,8 @@
 const lib = require('./_lib');
 
 const BASE_URL = 'https://sandbox-api-d.squadco.com';
-const AMOUNTS = { starter: 1900, pro: 3900 };
+const CURRENCY = 'NGN';
+const AMOUNTS = { starter: 3000000, pro: 6000000 };
 
 function key() {
   const value = process.env.SQUAD_SECRET_KEY || '';
@@ -21,9 +22,13 @@ async function request(path, options) {
     body: options.body ? JSON.stringify(options.body) : undefined
   });
   const data = await response.json().catch(() => ({}));
-  if (!response.ok) {
+  const bodyStatus = Number(data && data.status);
+  if (!response.ok || (Number.isFinite(bodyStatus) && bodyStatus >= 400) || data.success === false) {
+    const status = response.ok && Number.isFinite(bodyStatus) && bodyStatus >= 400 ? bodyStatus : response.status;
+    const message = typeof data.message === 'string' && data.message ? data.message : 'No error message returned';
+    console.error('Squad API request failed', { endpoint: path.split('?')[0], status, message });
     const error = new Error('squad_request_failed');
-    error.status = response.status;
+    error.status = status;
     throw error;
   }
   return data;
@@ -61,7 +66,7 @@ async function activatePayment(payment, details, webhookBody) {
   const status = String(details.transaction_status || '').toLowerCase();
   const reference = String(details.transaction_ref || '');
   const email = String(details.email || details.customer_email || '').toLowerCase();
-  if (status !== 'success' || reference !== payment.transaction_ref || amount !== payment.amount || currency !== payment.currency || email !== String(payment.email || '').toLowerCase()) {
+  if (status !== 'success' || reference !== payment.transaction_ref || amount !== payment.amount || currency !== CURRENCY || payment.currency !== CURRENCY || email !== String(payment.email || '').toLowerCase()) {
     return { ok: false, reason: 'payment_mismatch' };
   }
 
@@ -96,4 +101,4 @@ async function activatePayment(payment, details, webhookBody) {
   return { ok: true, alreadyPaid };
 }
 
-module.exports = { AMOUNTS, key, request, nextMonth, newReference, verifiedTransaction, verifiedDetails, activatePayment };
+module.exports = { CURRENCY, AMOUNTS, key, request, nextMonth, newReference, verifiedTransaction, verifiedDetails, activatePayment };

@@ -7,6 +7,38 @@ const originalFetch = global.fetch;
 const originalSecret = process.env.SUPABASE_SECRET_KEY;
 const originalSquadKey = process.env.SQUAD_SECRET_KEY;
 
+test('subscription amounts and currency are NGN only', async () => {
+  const squad = require('../api/_squad');
+  assert.equal(squad.CURRENCY, 'NGN');
+  assert.deepEqual(squad.AMOUNTS, { starter: 3000000, pro: 6000000 });
+  const result = await squad.activatePayment(
+    { transaction_ref: 'LOOPIN2REF', amount: 6000000, currency: 'NGN', email: 'founder@example.com', status: 'pending' },
+    { transaction_status: 'Success', transaction_ref: 'LOOPIN2REF', transaction_amount: 6000000, transaction_currency_id: 'USD', email: 'founder@example.com' }
+  );
+  assert.equal(result.ok, false);
+  assert.equal(result.reason, 'payment_mismatch');
+});
+
+test('Squad failures log status and provider message without logging the API key', async () => {
+  process.env.SQUAD_SECRET_KEY = 'sandbox_sk_private_test_value';
+  const originalLog = console.error;
+  let logged;
+  global.fetch = async () => new Response(JSON.stringify({ success: false, status: 400, message: 'Invalid payment currency' }), { status: 400 });
+  console.error = (...args) => { logged = args; };
+  try {
+    await assert.rejects(require('../api/_squad').request('/transaction/initiate', { method: 'POST', body: {} }));
+    assert.equal(logged[0], 'Squad API request failed');
+    assert.equal(logged[1].status, 400);
+    assert.equal(logged[1].message, 'Invalid payment currency');
+    assert.equal(JSON.stringify(logged).includes('sandbox_sk_private_test_value'), false);
+  } finally {
+    global.fetch = originalFetch;
+    console.error = originalLog;
+    if (originalSquadKey === undefined) delete process.env.SQUAD_SECRET_KEY;
+    else process.env.SQUAD_SECRET_KEY = originalSquadKey;
+  }
+});
+
 test('Pro checkout uses Squad sandbox, correct cents, and stores a pending attempt', async () => {
   process.env.SUPABASE_SECRET_KEY = 'test-supabase-secret';
   process.env.SQUAD_SECRET_KEY = 'sandbox_sk_test';
@@ -30,8 +62,8 @@ test('Pro checkout uses Squad sandbox, correct cents, and stores a pending attem
     if (target === 'https://sandbox-api-d.squadco.com/transaction/initiate') {
       assert.equal(options.headers.Authorization, 'Bearer sandbox_sk_test');
       const body = JSON.parse(options.body);
-      assert.equal(body.amount, 3900);
-      assert.equal(body.currency, 'USD');
+      assert.equal(body.amount, 6000000);
+      assert.equal(body.currency, 'NGN');
       assert.equal(body.is_recurring, true);
       assert.deepEqual(body.payment_channels, ['card', 'transfer', 'ussd', 'bank']);
       return new Response(JSON.stringify({ status: 200, data: { checkout_url: 'https://sandbox-pay.squadco.com/LOOPINTEST' } }), { status: 200 });
@@ -48,6 +80,8 @@ test('Pro checkout uses Squad sandbox, correct cents, and stores a pending attem
     assert.equal(result.body.checkout_url, 'https://sandbox-pay.squadco.com/LOOPINTEST');
     const storedAttempt = calls.find((call) => call.target.endsWith('/rest/v1/squad_payments'));
     assert.equal(JSON.parse(storedAttempt.options.body).email, 'founder@example.com');
+    assert.equal(JSON.parse(storedAttempt.options.body).amount, 6000000);
+    assert.equal(JSON.parse(storedAttempt.options.body).currency, 'NGN');
     const savedCheckout = calls.find((call) => call.target.includes('/rest/v1/squad_payments?transaction_ref=') && call.options.method === 'PATCH');
     assert.equal(JSON.parse(savedCheckout.options.body).checkout_url, result.body.checkout_url);
   } finally {
@@ -110,10 +144,10 @@ test('confirmed payment activates the plan only after Squad verifies the transac
     calls.push({ target, options });
     if (target.endsWith('/auth/v1/user')) return new Response(JSON.stringify({ id: '11111111-1111-4111-8111-111111111111', email: 'founder@example.com' }), { status: 200 });
     if (target.includes('/rest/v1/squad_payments?transaction_ref=')) {
-      return new Response(JSON.stringify([{ user_id: '11111111-1111-4111-8111-111111111111', email: 'founder@example.com', transaction_ref: reference, plan: 'pro', amount: 3900, currency: 'USD', status: 'pending' }]), { status: 200 });
+      return new Response(JSON.stringify([{ user_id: '11111111-1111-4111-8111-111111111111', email: 'founder@example.com', transaction_ref: reference, plan: 'pro', amount: 6000000, currency: 'NGN', status: 'pending' }]), { status: 200 });
     }
     if (target === 'https://sandbox-api-d.squadco.com/transaction/verify/' + reference) {
-      return new Response(JSON.stringify({ success: true, data: { transaction_status: 'Success', transaction_ref: reference, transaction_amount: 3900, transaction_currency_id: 'USD', email: 'founder@example.com', created_at: '2026-10-01T10:00:00Z', payment_information: { token_id: 'squad-test-token' } } }), { status: 200 });
+      return new Response(JSON.stringify({ success: true, data: { transaction_status: 'Success', transaction_ref: reference, transaction_amount: 6000000, transaction_currency_id: 'NGN', email: 'founder@example.com', created_at: '2026-10-01T10:00:00Z', payment_information: { token_id: 'squad-test-token' } } }), { status: 200 });
     }
     if (target.includes('/rest/v1/squad_subscriptions?on_conflict=')) return new Response(null, { status: 204 });
     if (target.includes('/rest/v1/profiles?id=eq.')) return new Response(null, { status: 204 });

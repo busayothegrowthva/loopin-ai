@@ -46,7 +46,7 @@ module.exports = async function handler(req, res) {
         transaction_ref: transactionRef,
         plan,
         amount: squad.AMOUNTS[plan],
-        currency: 'USD',
+        currency: squad.CURRENCY,
         status: 'pending'
       }
     });
@@ -61,7 +61,7 @@ module.exports = async function handler(req, res) {
         email: user.email,
         customer_name: profile[0].full_name || '',
         amount: squad.AMOUNTS[plan],
-        currency: 'USD',
+        currency: squad.CURRENCY,
         initiate_type: 'inline',
         transaction_ref: transactionRef,
         callback_url: callback,

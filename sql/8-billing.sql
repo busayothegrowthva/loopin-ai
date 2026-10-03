@@ -27,7 +27,7 @@ create table public.squad_payments (
   transaction_ref text not null unique,
   plan text not null check (plan in ('starter','pro')),
   amount integer not null check (amount > 0),
-  currency text not null check (currency = 'USD'),
+  currency text not null check (currency = 'NGN'),
   checkout_url text,
   status text not null default 'pending' check (status in ('pending','paid','failed')),
   created_at timestamptz not null default now(),

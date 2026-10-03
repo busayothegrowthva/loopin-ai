@@ -43,7 +43,7 @@ module.exports = async function handler(req, res) {
     const reference = squad.newReference();
     const paymentRows = await lib.db('squad_payments', {
       method: 'POST', prefer: 'return=representation',
-      body: { user_id: row.user_id, email: row.email, transaction_ref: reference, plan: row.plan, amount: squad.AMOUNTS[row.plan], currency: 'USD', status: 'pending' }
+      body: { user_id: row.user_id, email: row.email, transaction_ref: reference, plan: row.plan, amount: squad.AMOUNTS[row.plan], currency: squad.CURRENCY, status: 'pending' }
     }).catch(() => null);
     const payment = paymentRows && paymentRows[0];
     if (!payment) {

@@ -14,7 +14,7 @@
 
 - Never put a Squad secret key in browser code, public config, or chat.
 - Use Squad sandbox base URL `https://sandbox-api-d.squadco.com` for this assignment.
-- Current public prices are $19/month Starter and $39/month Pro; send USD in cents.
+- Current public prices are Starter ₦30,000/month and Pro ₦60,000/month; send NGN amounts in kobo.
 - Trial path grants 14 days without charge; direct-subscribe path charges immediately.
 - Never activate paid access from a browser redirect alone; verify with Squad's transaction verification endpoint.
 - Store Squad card tokens and subscription controls so authenticated users cannot read or change them.
@@ -42,7 +42,7 @@ Create a private subscription record per user with plan, status, Squad card toke
 - Create: `api/squad-webhook.js`
 - Create: `billing-return.html`
 
-`POST /api/squad-checkout` accepts `{plan}` for an authenticated user, creates a pending payment record, and calls Squad `POST /transaction/initiate` with a unique `transaction_ref`, `currency: "USD"`, amount `1900` or `3900`, `initiate_type: "inline"`, `is_recurring: true`, callback URL, and metadata. It returns only the validated Squad checkout URL and reference.
+`POST /api/squad-checkout` accepts `{plan}` for an authenticated user, creates a pending payment record, and calls Squad `POST /transaction/initiate` with a unique `transaction_ref`, `currency: "NGN"`, amount `3000000` or `6000000` kobo, `initiate_type: "inline"`, `is_recurring: true`, callback URL, and metadata. It returns only the validated Squad checkout URL and reference.
 
 `POST /api/squad-confirm` accepts `{transaction_ref}`, verifies that the current user owns the pending attempt, calls Squad `GET /transaction/verify/{transaction_ref}`, and only marks it paid if status, amount, currency, and email match. It updates the user's plan and stores tokenization data only from the verified transaction details.
 
